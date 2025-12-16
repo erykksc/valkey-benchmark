@@ -1,0 +1,3 @@
+[tasks.docker]
+description = "Run valkey docker image"
+run = "docker run --rm valkey/valkey:9.0.1"
