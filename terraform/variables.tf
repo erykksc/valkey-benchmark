@@ -55,13 +55,13 @@ variable "boot_disk_size_gb" {
 variable "instance_image_client" {
   description = "The OS image for the client VM instance."
   type        = string
-  default     = "cos-125-19216-104-74"
+  default     = "https://www.googleapis.com/compute/v1/projects/debian-cloud/global/images/debian-13-trixie-v20251209"
 }
 
 variable "instance_image_sut" {
   description = "The OS image for the SUT VM instances."
   type        = string
-  default     = "cos-125-19216-104-74"
+  default     = "https://www.googleapis.com/compute/v1/projects/cos-cloud/global/images/cos-125-19216-104-74"
 }
 
 variable "sut_instance_count" {
