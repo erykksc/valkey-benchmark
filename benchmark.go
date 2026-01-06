@@ -139,7 +139,7 @@ func main() {
 				}
 
 				// Linear probability shift from write-heavy to read-heavy.
-				progress := elapsed.Seconds() / duration.Seconds() // Use duration
+				progress := elapsed.Seconds() / duration.Seconds()
 				getProb := 0.1 + (progress * 0.8)
 
 				key := "prefix:" + fmt.Sprintf("%016d", z.Uint64())
