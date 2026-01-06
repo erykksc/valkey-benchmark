@@ -6,7 +6,7 @@ provider "google" {
 
 ### NETWORK
 resource "google_compute_network" "vpc_network" {
-  name                    = var.network_name
+  name                    = "valkey-benchmark-network"
   auto_create_subnetworks = true
 }
 
@@ -34,7 +34,9 @@ resource "google_compute_instance" "sut_nodes" {
       image = var.instance_image_sut
     }
   }
-  metadata_startup_script = file("startup_sut.sh")
+  metadata_startup_script = templatefile("startup_sut.sh", {
+    deployment_mode = var.deployment_mode
+  })
 
 
   network_interface {

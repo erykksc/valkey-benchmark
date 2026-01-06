@@ -20,3 +20,6 @@ override.tf.json
 
 # Ignore temporary plan files
 *.tfplan
+
+bin/
+dump.rdb

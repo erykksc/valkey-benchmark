@@ -28,24 +28,6 @@ variable "client_machine_type" {
   default     = "t2d-standard-2"
 }
 
-variable "network_name" {
-  description = "The name for the VPC network."
-  type        = string
-  default     = "valkey-benchmark-network"
-}
-
-variable "sut_instance_name" {
-  description = "The name for the SUT (Valkey) instance."
-  type        = string
-  default     = "valkey-sut-instance"
-}
-
-variable "client_instance_name" {
-  description = "The name for the client (load generator) instance."
-  type        = string
-  default     = "valkey-client-instance"
-}
-
 variable "boot_disk_size_gb" {
   description = "The size of the boot disk in GB."
   type        = number
@@ -67,5 +49,15 @@ variable "instance_image_sut" {
 variable "sut_instance_count" {
   description = "The number of SUT instances to create for the Valkey cluster."
   type        = number
-  default     = 2
+  default     = 3
+}
+
+variable "deployment_mode" {
+  description = "Deployment mode for Valkey: 'single' or 'cluster'."
+  type        = string
+  default     = "cluster"
+  validation {
+    condition     = contains(["single", "cluster"], var.deployment_mode)
+    error_message = "Must be either 'single' or 'cluster'."
+  }
 }

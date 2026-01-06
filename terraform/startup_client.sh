@@ -1,10 +1,18 @@
-#Autostart services https://askubuntu.com/questions/1367139/apt-get-upgrade-auto-restart-services
+#!/bin/bash
 export DEBIAN_FRONTEND=noninteractive
 
 sudo apt update
 sudo apt upgrade -y
-sudo apt install -y -q git
-sudo apt install -y -q golang-go
-sudo apt install -y -q make
+# Same dependencies as in Dockerfile.build
+sudo apt install -y \
+	build-essential \
+	make \
+	gcc \
+	git \
+	pkg-config \
+	libssl-dev \
+	wget \
+	tcl \
+	procps
 
 touch /done

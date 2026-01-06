@@ -18,7 +18,27 @@ terraform init
 # see the deployment plan
 terraform plan
 # initialize terraform
-terraform apply # `add --auto-approve` to not get prompted
+terraform apply --auto-approve
+
+# wait for the system to deploy fully
+
+# go back to the root of the repo
+cd ..
+
+# connect the SUT nodes into a cluster
+./setup-cluster.sh
+
+# check if the cluster is healty
+./check-cluster.sh
+
+# TODO: implement
+./run-benchmark.sh
+
+# TODO: implement
+./get-results.sh
+
+# destroy the deployed infrastructure
+terraform destroy --auto-approve
 ```
 
 ## Decisions
@@ -36,6 +56,24 @@ As I benchmark pure in-memory througput (Persistance will be OFF), I've decided 
 
 For the load-generator I've chosen
 
+#### Benchmark runs
+
+For single node I would like to run:
+
+| Machine Type    | Price/Month |
+| --------------- | ----------- |
+| t2d-standard-1  | 45$/month   |
+| t2d-standard-2  | 85$/month   |
+| t2d-standard-4  | 164$/month  |
+| t2d-standard-8  | 323$/month  |
+| t2d-standard-16 | 641/month   |
+| t2d-standard-32 | 1,276/month |
+| t2d-standard-48 | 1,912/month |
+| t2d-standard-64 | 2,389/month |
+
+For cluster:
+3x t2d-standard-1 ~= 134$/month
+
 ### Docker vs Bare Metal
 
 I've decided to go with deploying valkey inside docker containers, as it is a realistic way of deploying it.
@@ -45,3 +83,16 @@ For future research one could look into running it on bare metal to check the di
 
 I've chosen Google's COS, as it is optimized for running containers and has minimal amount of other services running, reducing the impact on the benchmark.
 For the client node I've went with Debian, as I don't need so many optimizations and it comes with some basic tools added.
+
+### Cluster Size
+
+Note that the minimal cluster that works as expected must contain at least three primary nodes. For deployment, we strongly recommend a six-node cluster, with three primaries and three replicas.
+
+### Valkey Version
+
+I've decided to test bleeding edge with version 9.0.1, instead of provided by package maintainers version 8
+
+### TODO
+
+1. Pin the Process: Use taskset to lock the Valkey process to a single physical core to prevent the OS from moving it around, which ruins benchmark consistency.
+2. Titanium Advantage: C4 uses Google's "Titanium" offload engine. This moves networking and storage tasks to dedicated hardware, leaving the CPU 100% free for your code.

@@ -6,3 +6,7 @@ terraform = "latest"
 [tasks.docker]
 description = "Run valkey docker image"
 run = "docker run --rm valkey/valkey:9.0.1"
+
+[tasks.build-valkey]
+description = "Build valkey binaries for Debian"
+run = "docker build -f Dockerfile.build -t valkey-builder --output ./bin ."
