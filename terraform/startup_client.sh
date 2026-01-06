@@ -15,4 +15,7 @@ sudo apt install -y \
 	tcl \
 	procps
 
+# Required by valkey
+sudo sysctl vm.overcommit_memory=1
+
 touch /done

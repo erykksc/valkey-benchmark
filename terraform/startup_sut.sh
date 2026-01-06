@@ -19,6 +19,9 @@ sudo apt install -y \
 iptables -A INPUT -p tcp --dport 6379 -j ACCEPT  # For client connections
 iptables -A INPUT -p tcp --dport 16379 -j ACCEPT # For the Valkey cluster bus
 
+# Required by valkey
+sudo sysctl vm.overcommit_memory=1
+
 # NOTE: ${deployment_mode} is a template syntax of terraform (templatefile)
 if [[ "${DEPLOYMENT_MODE}" == "cluster" ]]; then
   echo "Starting Valkey in cluster mode"
