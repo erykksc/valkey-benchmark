@@ -12,12 +12,16 @@ gcloud config set project valkey-benchmark
 # enable compute service
 cloud services enable compute.googleapis.com
 
+# build valkey version 9.0.1 to upload to sut_nodes
+docker build -f Dockerfile.build -t valkey-builder --output ./bin .
+# if mise is installed: `mise run build`
+
 cd terraform
 # initialize terraform
 terraform init
 # see the deployment plan
 terraform plan
-# initialize terraform
+# deploy infrastructure
 terraform apply --auto-approve
 
 # wait for the system to deploy fully
@@ -30,6 +34,7 @@ cd ..
 
 # check if the cluster is healty
 ./check-cluster.sh
+# NOTE: for single node use `./check-single.sh`
 
 # TODO: implement
 ./run-benchmark.sh

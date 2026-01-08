@@ -1,10 +1,10 @@
 #!/bin/bash
 export DEBIAN_FRONTEND=noninteractive
 
-sudo apt update
-sudo apt upgrade -y
+apt-get update
+apt-get upgrade -y
 # Same dependencies as in Dockerfile.build
-sudo apt install -y \
+apt-get install -y \
 	build-essential \
 	make \
 	gcc \
@@ -15,7 +15,11 @@ sudo apt install -y \
 	tcl \
 	procps
 
-# Required by valkey
-sudo sysctl vm.overcommit_memory=1
+# Install valkey binaries
+cd /usr/local/bin
+wget -O valkey-cli https://storage.googleapis.com/${valkey_binaries_bucket}/valkey-cli
+wget -O valkey-benchmark https://storage.googleapis.com/${valkey_binaries_bucket}/valkey-benchmark
+wget -O my-valkey-benchmark https://storage.googleapis.com/${valkey_binaries_bucket}/my-valkey-benchmark
+chmod +x valkey-cli valkey-benchmark my-valkey-benchmark
 
 touch /done

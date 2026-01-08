@@ -43,19 +43,19 @@ variable "instance_image_client" {
 variable "instance_image_sut" {
   description = "The OS image for the SUT VM instances."
   type        = string
-  default     = "https://www.googleapis.com/compute/v1/projects/cos-cloud/global/images/cos-125-19216-104-74"
+  default     = "https://www.googleapis.com/compute/v1/projects/debian-cloud/global/images/debian-13-trixie-v20251209"
 }
 
 variable "sut_instance_count" {
   description = "The number of SUT instances to create for the Valkey cluster."
   type        = number
-  default     = 3
+  default     = 1
 }
 
 variable "deployment_mode" {
   description = "Deployment mode for Valkey: 'single' or 'cluster'."
   type        = string
-  default     = "cluster"
+  default     = "single"
   validation {
     condition     = contains(["single", "cluster"], var.deployment_mode)
     error_message = "Must be either 'single' or 'cluster'."

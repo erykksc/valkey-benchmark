@@ -44,12 +44,14 @@ func (p *DataPool) GetRandomSlice(length int) ([]byte, error) {
 
 type OperationResult struct {
 	OperationType string
+	FinishedAt    time.Time
 	Latency       time.Duration
 	Success       bool
 }
 
 func main() {
 	targetAddr := flag.String("target-addr", "127.0.0.1:6379", "Address of the Valkey instance or a comma separated list of initial cluster nodes")
+	password := flag.String("password", "", "Password to use for authentication with valkey-server")
 	totalKeys := flag.Uint64("total-keys", 1000000, "Total key amount")
 	concurrency := flag.Int("concurrency", 128, "Number of simultaneous workers")
 	poolSizeMB := flag.Int("pool-size", 100, "Data Pool size of random data in MB")
@@ -57,7 +59,7 @@ func main() {
 	flag.Parse()
 
 	poolSize := *poolSizeMB * 1024 * 1024
-	client, err := valkey.NewClient(valkey.ClientOption{InitAddress: []string{*targetAddr}})
+	client, err := valkey.NewClient(valkey.ClientOption{InitAddress: []string{*targetAddr}, Password: *password})
 	if err != nil {
 		panic(err)
 	}
@@ -104,7 +106,7 @@ func main() {
 			writer := csv.NewWriter(file)
 			defer writer.Flush()
 
-			header := []string{"OperationType", "Latency(us)", "Success"}
+			header := []string{"FinishedAt", "OperationType", "Latency(us)", "Success"}
 			if err := writer.Write(header); err != nil {
 				panic(fmt.Sprintf("Failed to write CSV header: %v", err))
 			}
@@ -113,6 +115,7 @@ func main() {
 			for result := range resultsQueue {
 				opsCount++
 				record := []string{
+					strconv.FormatInt(result.FinishedAt.Unix(), 10),
 					result.OperationType,
 					strconv.FormatInt(result.Latency.Microseconds(), 10),
 					strconv.FormatBool(result.Success),
@@ -172,10 +175,12 @@ func main() {
 					}
 					opErr = client.Do(ctx, client.B().Set().Key(key).Value(valkey.BinaryString(val)).Build()).Error()
 				}
-				latency := time.Since(startOp)
+				finishedAt := time.Now()
+				latency := finishedAt.Sub(startOp)
 
 				resultsQueue <- OperationResult{
 					OperationType: opType,
+					FinishedAt:    finishedAt,
 					Latency:       latency,
 					Success:       opErr == nil,
 				}
