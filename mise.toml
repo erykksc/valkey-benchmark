@@ -12,3 +12,13 @@ run = "docker run --rm valkey/valkey:9.0.1"
 [tasks.build]
 description = "Build binaries for benchmark"
 run = "docker build -f Dockerfile.build -t valkey-builder --output ./bin ."
+
+[tasks.deploy]
+description = "Deploy the benchmark on GCP"
+depends = ["build"]
+run = '''
+#!/usr/bin/env bash
+cd terraform 
+terraform destroy --auto-approve 
+terraform apply --auto-approve"
+'''

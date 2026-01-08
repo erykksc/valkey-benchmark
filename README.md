@@ -12,22 +12,20 @@ gcloud config set project valkey-benchmark
 # enable compute service
 cloud services enable compute.googleapis.com
 
-# build valkey version 9.0.1 to upload to sut_nodes
-docker build -f Dockerfile.build -t valkey-builder --output ./bin .
-# if mise is installed: `mise run build`
-
-cd terraform
-# initialize terraform
-terraform init
-# see the deployment plan
-terraform plan
-# deploy infrastructure
-terraform apply --auto-approve
+mise run deploy
+# NOTE: if mise is not installed then do the following steps:
+# 1. Build valkey version 9.0.1 to upload to sut_nodes:
+# > docker build -f Dockerfile.build -t valkey-builder --output ./bin .
+# > cd terraform
+# 2. Deploy to terraform
+# > terraform init
+# > terraform plan
+# > terraform apply --auto-approve
+# 3. Go back to the root of the repo
+# > cd ..
 
 # wait for the system to deploy fully
 
-# go back to the root of the repo
-cd ..
 
 # connect the SUT nodes into a cluster
 ./setup-cluster.sh
