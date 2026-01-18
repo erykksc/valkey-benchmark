@@ -13,9 +13,13 @@ echo "SUT nodes:"
 echo "$sut_nodes"
 
 # This will only work if the SUT nodes were started in 'cluster' mode
-valkey-cli \
-	--no-auth-warning \
-	--pass "csb-benchmark" \
-	--cluster create $(echo $sut_nodes) \
-	--cluster-replicas 0 \
+command_args=(
+	valkey-cli
+	--no-auth-warning
+	--pass "csb-benchmark"
+	--cluster create $(echo $sut_nodes)
+	--cluster-replicas 0
 	--cluster-yes
+)
+
+gcloud compute ssh valkey-client-node --zone=europe-west3-c --command="${command_args[*]}"
