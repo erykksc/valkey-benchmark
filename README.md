@@ -20,7 +20,7 @@ mise run redeploy
 # wait for the system to deploy fully
 
 
-# connect the SUT nodes into a cluster
+# connect the SUT nodes into a cluster if deploying in a cluster mode (default deployment is single node)
 ./setup-cluster.sh
 
 # check if the cluster is healty
@@ -34,6 +34,7 @@ mise run redeploy
 ./get-results.sh
 
 # destroy the deployed infrastructure
+cd terraform
 terraform destroy --auto-approve
 ```
 
