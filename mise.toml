@@ -7,7 +7,18 @@ uv = "latest"
 
 [tasks.valkey-docker]
 description = "Run valkey docker image"
-run = "docker run --rm valkey/valkey:9.0.1"
+run = '''
+#!/usr/bin/env bash
+# Calculate the cores to use, equivalent to min(nproc-1, 1)
+NUM_CORES=$(nproc)
+CORES_MINUS_ONE=$((NUM_CORES - 1))
+RESULT=$((CORES_MINUS_ONE < 1 ? 1 : CORES_MINUS_ONE))
+
+docker run --rm -p 6379:6379 valkey/valkey:9.0.1 \
+    --io-threads "$RESULT" \
+    --requirepass "csb-benchmark" \
+    --appendonly yes
+'''
 
 [tasks.build]
 description = "Build binaries for benchmark"
