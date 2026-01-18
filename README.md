@@ -93,7 +93,7 @@ I've decided to test bleeding edge with version 9.0.1, instead of provided by pa
 
 I'm using Zipf Distribution (exponent:1.1, offset:1.0) as it is resembles realistic traffic, some keys/data are retrieved much more often than some other ones.
 I'm using a seeded random data generator so that the data-generator produces the same data each time.
-I'm using keys of length 7(prefix)+16(uuid), this is an attempt to generate realistic key lengths.
+I'm using keys of length 7(prefix)+16(Base64 Encoded UUID), this is an attempt to generate realistic key lengths.
 Variable key sizes could be further area of research (look for paper that already did that).
 
 ### Workload
