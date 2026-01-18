@@ -10,19 +10,12 @@ gcloud auth login
 # set the project
 gcloud config set project valkey-benchmark
 # enable compute service
-cloud services enable compute.googleapis.com
+gcloud services enable compute.googleapis.com
+gcloud auth application-default login
 
-mise run deploy
-# NOTE: if mise is not installed then do the following steps:
-# 1. Build valkey version 9.0.1 to upload to sut_nodes:
-# > docker build -f Dockerfile.build -t valkey-builder --output ./bin .
-# > cd terraform
-# 2. Deploy to terraform
-# > terraform init
-# > terraform plan
-# > terraform apply --auto-approve
-# 3. Go back to the root of the repo
-# > cd ..
+# destroy the previous deployment and deploy the cloud resources again
+# NOTE: you can see the individual steps in `./mise.toml` file if you don't want to use `mise`
+mise run redeploy
 
 # wait for the system to deploy fully
 
