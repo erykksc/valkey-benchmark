@@ -50,6 +50,7 @@ func (p *DataPool) GetRandomSlice(rng *rand.Rand, length int) ([]byte, error) {
 
 type OperationResult struct {
 	OperationType string
+	Key           string
 	FinishedAt    time.Time
 	Latency       time.Duration
 	Success       bool
@@ -125,7 +126,7 @@ func main() {
 			writer := csv.NewWriter(file)
 			defer writer.Flush()
 
-			header := []string{"FinishedAt", "OperationType", "Latency(us)", "Success"}
+			header := []string{"FinishedAt", "OperationType", "Key", "Latency(us)", "Success"}
 			if err := writer.Write(header); err != nil {
 				panic(fmt.Sprintf("Failed to write CSV header: %v", err))
 			}
@@ -136,6 +137,7 @@ func main() {
 				record := []string{
 					strconv.FormatInt(result.FinishedAt.Unix(), 10),
 					result.OperationType,
+					result.Key,
 					strconv.FormatInt(result.Latency.Microseconds(), 10),
 					strconv.FormatBool(result.Success),
 				}
@@ -196,8 +198,9 @@ func main() {
 				latency := finishedAt.Sub(startOp)
 
 				resultsQueue <- OperationResult{
-					OperationType: opType,
 					FinishedAt:    finishedAt,
+					OperationType: opType,
+					Key:           key,
 					Latency:       latency,
 					Success:       opErr == nil,
 				}
