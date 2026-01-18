@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"math/rand/v2"
 	"os"
+	"runtime"
 	"strconv"
 	"sync"
 	"time"
@@ -26,21 +27,16 @@ type DataPool struct {
 	size   int
 }
 
-func NewDataPool(size int) *DataPool {
-	var seed [32]byte
-	binary.LittleEndian.PutUint64(seed[0:], SEED1)
-	binary.LittleEndian.PutUint64(seed[8:], SEED2)
-	prng := rand.NewChaCha8(seed)
-
+func NewDataPool(rng *rand.ChaCha8, size int) *DataPool {
 	b := make([]byte, size)
-	_, err := prng.Read(b)
+	_, err := rng.Read(b)
 	if err != nil {
 		panic("Error generating random data for the new DataPool")
 	}
 	return &DataPool{buffer: b, size: size}
 }
 
-func (p *DataPool) GetRandomSlice(length int) ([]byte, error) {
+func (p *DataPool) GetRandomSlice(rng *rand.Rand, length int) ([]byte, error) {
 	if length <= 0 {
 		return nil, errors.New("requesting slice of size smaller or equal to 0")
 	}
@@ -48,7 +44,7 @@ func (p *DataPool) GetRandomSlice(length int) ([]byte, error) {
 		return nil, errors.New("requesting slice of size larger than DataPoolSize")
 	}
 	maxOffset := p.size - length
-	offset := rand.IntN(maxOffset + 1)
+	offset := rng.IntN(maxOffset + 1)
 	return p.buffer[offset : offset+length], nil
 }
 
@@ -78,7 +74,14 @@ func main() {
 	}
 	defer client.Close()
 
-	pool := NewDataPool(poolSize)
+	// setup data pool
+	var seed [32]byte
+	binary.LittleEndian.PutUint64(seed[0:], SEED1)
+	binary.LittleEndian.PutUint64(seed[8:], SEED2)
+	rng := rand.NewChaCha8(seed)
+	pool := NewDataPool(rng, poolSize)
+
+	// setup zipf distribution for keys to simulate hot keys
 	z := rand.NewZipf(rand.New(rand.NewPCG(SEED1, SEED2)), 1.1, 1.0, *totalKeys)
 
 	benchmarkStartTime := time.Now()
@@ -113,6 +116,9 @@ func main() {
 			fmt.Fprintf(file, "#   Data Pool Size (MB): %d\n", *poolSizeMB)
 			fmt.Fprintf(file, "#   Duration: %s\n", duration)
 			fmt.Fprintf(file, "#   Benchmark Start Time: %s\n", benchmarkStartTime.Format(time.RFC3339))
+			fmt.Fprintf(file, "#   Go Version: %s\n", runtime.Version())
+			fmt.Fprintf(file, "#   GOMAXPROCS: %d\n", runtime.GOMAXPROCS(0))
+			fmt.Fprintf(file, "#   OS/Arch: %s/%s\n", runtime.GOOS, runtime.GOARCH)
 			fmt.Fprintf(file, "#   Output File: %s\n", outputFile) // Include generated filename
 			fmt.Fprintf(file, "#-------------------------------------------------\n")
 
@@ -148,6 +154,8 @@ func main() {
 
 	for i := 0; i < *concurrency; i++ {
 		workersWg.Go(func() {
+			// each worker gets its own data generator for data
+			rng := rand.New(rand.NewPCG(SEED1, uint64(i)))
 			for {
 				elapsed := time.Since(benchmarkStartTime)
 				if elapsed >= *duration {
@@ -164,7 +172,7 @@ func main() {
 				var opErr error
 
 				startOp := time.Now()
-				if rand.Float64() < getProb {
+				if rng.Float64() < getProb {
 					// Perform a GET operation.
 					opType = "GET"
 					opErr = client.Do(ctx, client.B().Get().Key(key).Build()).Error()
@@ -174,11 +182,11 @@ func main() {
 					var valSize int
 					// Bimodal distribution for value sizes.
 					const KiB = 1024
-					valSize = int(rand.NormFloat64()*(0.75*KiB) + (1.5 * KiB))
+					valSize = int(rng.NormFloat64()*(0.75*KiB) + (1.5 * KiB))
 					valSize = max(2, valSize)         // Minimal byte size, 2 because of an empty JSON '{}'
 					valSize = min(pool.size, valSize) // Maximal byte size
 
-					val, err := pool.GetRandomSlice(valSize)
+					val, err := pool.GetRandomSlice(rng, valSize)
 					if err != nil {
 						panic(err.Error())
 					}
