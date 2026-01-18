@@ -12,7 +12,7 @@ sut_nodes=$(
 echo "SUT nodes:"
 echo "$sut_nodes"
 
-# TODO: check if it works for a single node (can a single node create a cluster)
+# This will only work if the SUT nodes were started in 'cluster' mode
 valkey-cli \
 	--no-auth-warning \
 	--pass "csb-benchmark" \
