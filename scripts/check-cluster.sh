@@ -11,7 +11,12 @@ sut_nodes=$(
 
 first_node=$(echo "$sut_nodes" | head -n 1)
 
-valkey-cli --no-auth-warning \
-	--pass "csb-benchmark" \
-	--cluster \
+command_args=(
+	valkey-cli
+	--no-auth-warning
+	--pass 'csb-benchmark'
+	--cluster
 	check "$first_node"
+)
+
+gcloud compute ssh valkey-client-node --zone=europe-west3-c --command="${command_args[*]}"

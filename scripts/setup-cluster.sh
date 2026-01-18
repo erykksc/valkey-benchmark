@@ -13,4 +13,9 @@ echo "SUT nodes:"
 echo "$sut_nodes"
 
 # TODO: check if it works for a single node (can a single node create a cluster)
-valkey-cli --cluster create $(echo $sut_nodes) --cluster-replicas 0 --cluster-yes
+valkey-cli \
+	--no-auth-warning \
+	--pass "csb-benchmark" \
+	--cluster create $(echo $sut_nodes) \
+	--cluster-replicas 0 \
+	--cluster-yes
