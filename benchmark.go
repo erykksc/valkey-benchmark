@@ -2,7 +2,7 @@ package main
 
 import (
 	"context"
-	crand "crypto/rand"
+	"encoding/binary"
 	"encoding/csv"
 	"errors"
 	"flag"
@@ -16,14 +16,24 @@ import (
 	"github.com/valkey-io/valkey-go"
 )
 
+const (
+	SEED1 uint64 = 1
+	SEED2 uint64 = 2
+)
+
 type DataPool struct {
 	buffer []byte
 	size   int
 }
 
 func NewDataPool(size int) *DataPool {
+	var seed [32]byte
+	binary.LittleEndian.PutUint64(seed[0:], SEED1)
+	binary.LittleEndian.PutUint64(seed[8:], SEED2)
+	prng := rand.NewChaCha8(seed)
+
 	b := make([]byte, size)
-	_, err := crand.Read(b)
+	_, err := prng.Read(b)
 	if err != nil {
 		panic("Error generating random data for the new DataPool")
 	}
@@ -53,23 +63,26 @@ func main() {
 	targetAddr := flag.String("target-addr", "127.0.0.1:6379", "Address of the Valkey instance or a comma separated list of initial cluster nodes")
 	password := flag.String("password", "", "Password to use for authentication with valkey-server")
 	totalKeys := flag.Uint64("total-keys", 1000000, "Total key amount")
-	concurrency := flag.Int("concurrency", 128, "Number of simultaneous workers")
+	concurrency := flag.Int("concurrency", 1024, "Number of simultaneous workers")
 	poolSizeMB := flag.Int("pool-size", 100, "Data Pool size of random data in MB")
-	duration := flag.Duration("duration", 10*time.Minute, "Duration of the benchmark")
+	duration := flag.Duration("duration", 20*time.Minute, "Duration of the benchmark")
 	flag.Parse()
 
 	poolSize := *poolSizeMB * 1024 * 1024
-	client, err := valkey.NewClient(valkey.ClientOption{InitAddress: []string{*targetAddr}, Password: *password})
+	client, err := valkey.NewClient(valkey.ClientOption{
+		InitAddress: []string{*targetAddr},
+		Password:    *password,
+	})
 	if err != nil {
 		panic(err)
 	}
 	defer client.Close()
 
 	pool := NewDataPool(poolSize)
-	z := rand.NewZipf(rand.New(rand.NewPCG(1, 2)), 1.1, 1.0, *totalKeys)
+	z := rand.NewZipf(rand.New(rand.NewPCG(SEED1, SEED2)), 1.1, 1.0, *totalKeys)
 
-	startTime := time.Now()
-	benchmarkRunID := startTime.Format("20060102-150405") // Unique ID for this run
+	benchmarkStartTime := time.Now()
+	benchmarkRunID := benchmarkStartTime.Format("20060102-150405") // Unique ID for this run
 
 	err = os.MkdirAll("results", 0755)
 	if err != nil {
@@ -99,7 +112,7 @@ func main() {
 			fmt.Fprintf(file, "#   Concurrency: %d\n", *concurrency)
 			fmt.Fprintf(file, "#   Data Pool Size (MB): %d\n", *poolSizeMB)
 			fmt.Fprintf(file, "#   Duration: %s\n", duration)
-			fmt.Fprintf(file, "#   Benchmark Start Time: %s\n", startTime.Format(time.RFC3339))
+			fmt.Fprintf(file, "#   Benchmark Start Time: %s\n", benchmarkStartTime.Format(time.RFC3339))
 			fmt.Fprintf(file, "#   Output File: %s\n", outputFile) // Include generated filename
 			fmt.Fprintf(file, "#-------------------------------------------------\n")
 
@@ -121,7 +134,7 @@ func main() {
 					strconv.FormatBool(result.Success),
 				}
 				if err := writer.Write(record); err != nil {
-					fmt.Printf("Error writing record to CSV: %v\n", err)
+					panic(fmt.Sprintf("Error writing record to CSV: %v\n", err))
 				}
 			}
 			fmt.Printf("\n[Processor] Finished writing %d results to %s\n", opsCount, outputFile)
@@ -136,7 +149,7 @@ func main() {
 	for i := 0; i < *concurrency; i++ {
 		workersWg.Go(func() {
 			for {
-				elapsed := time.Since(startTime)
+				elapsed := time.Since(benchmarkStartTime)
 				if elapsed >= *duration {
 					return
 				}
@@ -160,13 +173,9 @@ func main() {
 					opType = "SET"
 					var valSize int
 					// Bimodal distribution for value sizes.
-					if rand.Float64() < 0.8 {
-						valSize = int(rand.NormFloat64()*50 + 256) // Smaller values
-					} else {
-						valSize = int(rand.NormFloat64()*2048 + 10240) // Larger values
-					}
-
-					valSize = max(2, valSize)         // Minimal byte size
+					const KiB = 1024
+					valSize = int(rand.NormFloat64()*(0.75*KiB) + (1.5 * KiB))
+					valSize = max(2, valSize)         // Minimal byte size, 2 because of an empty JSON '{}'
 					valSize = min(pool.size, valSize) // Maximal byte size
 
 					val, err := pool.GetRandomSlice(valSize)
@@ -196,7 +205,7 @@ func main() {
 		for {
 			select {
 			case <-ticker.C:
-				fmt.Printf("[%v] Benchmark in progress (Run ID: %s)\n", time.Since(startTime).Round(time.Second), benchmarkRunID)
+				fmt.Printf("[%v] Benchmark in progress (Run ID: %s)\n", time.Since(benchmarkStartTime).Round(time.Second), benchmarkRunID)
 			case <-stopReporter:
 				return
 			}
@@ -209,5 +218,5 @@ func main() {
 	resultsWg.Wait()
 
 	fmt.Println("\n--- Benchmark Finished ---")
-	fmt.Printf("Total duration for Run ID %s: %v\n", benchmarkRunID, time.Since(startTime).Round(time.Second))
+	fmt.Printf("Total duration for Run ID %s: %v\n", benchmarkRunID, time.Since(benchmarkStartTime).Round(time.Second))
 }
