@@ -89,6 +89,17 @@ Note that the minimal cluster that works as expected must contain at least three
 
 I've decided to test bleeding edge with version 9.0.1, instead of provided by package maintainers version 8
 
+### Data-generation
+
+I'm using Zipf Distribution (exponent:1.1, offset:1.0) as it is resembles realistic traffic, some keys/data are retrieved much more often than some other ones.
+I'm using a seeded random data generator so that the data-generator produces the same data each time.
+I'm using keys of length 7(prefix)+16(uuid), this is an attempt to generate realistic key lengths.
+Variable key sizes could be further area of research (look for paper that already did that).
+
+### Workload
+
+Starts with 10% GET and 90% SET and linearliy shifts to 90% GET and 10% SET
+
 ### TODO
 
 1. Pin the Process: Use taskset to lock the Valkey process to a single physical core to prevent the OS from moving it around, which ruins benchmark consistency.
