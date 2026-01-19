@@ -16,10 +16,11 @@ touch /valkey-installed
 # Required by valkey
 sysctl vm.overcommit_memory=1
 
-# Calculate the cores to use, equivalent to min(nproc-1, 1)
+# Calculate the cores to use, equivalent to min(max(nproc/4, 1), 4)
 NUM_CORES=$(nproc)
-CORES_MINUS_ONE=$((NUM_CORES - 1))
-RESULT=$((CORES_MINUS_ONE < 1 ? 1 : CORES_MINUS_ONE))
+QUARTER_CORES=$((NUM_CORES / 4))
+MAX_VAL=$((QUARTER_CORES > 1 ? QUARTER_CORES : 1))
+RESULT=$((MAX_VAL < 4 ? MAX_VAL : 4))
 
 # NOTE: ${deployment_mode} is a template variable from terraform's templatefile()
 if [[ "${deployment_mode}" == "cluster" ]]; then

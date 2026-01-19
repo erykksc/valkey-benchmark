@@ -12,6 +12,8 @@ apt-get install -y \
 	pkg-config \
 	libssl-dev \
 	wget \
+	btop \
+	tmux \
 	tcl \
 	procps
 
