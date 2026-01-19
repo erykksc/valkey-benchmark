@@ -1,5 +1,7 @@
 ## Steps to run
 
+You need to run the following steps only once (configure gcloud):
+
 ```bash
 # create a project named 'valkey-benchmark' in Google Cloud Console
 # NOTE: you can use a different project name, but then change it in the `./terraform/variables.tf`
@@ -12,26 +14,29 @@ gcloud config set project valkey-benchmark
 # enable compute service
 gcloud services enable compute.googleapis.com
 gcloud auth application-default login
+```
 
+The following steps you need to run for each benchmark run:
+
+```bash
 # destroy the previous deployment and deploy the cloud resources again
 # NOTE: you can see the individual steps in `./mise.toml` file if you don't want to use `mise`
 mise run redeploy
 
 # wait for the system to deploy fully
 
-
 # connect the SUT nodes into a cluster if deploying in a cluster mode (default deployment is single node)
-./setup-cluster.sh
+# NOTE: skip this step if benchmarking a single node deployment
+./scripts/setup-cluster.sh
 
 # check if the cluster is healty
-./check-cluster.sh
+./scripts/check-cluster.sh
 # NOTE: for single node use `./check-single.sh`
 
-# TODO: implement
-./run-benchmark.sh
+./scripts/run-benchmark.sh
 
-# TODO: implement
-./get-results.sh
+# collect results from the sut client onto local machine
+./scripts/get-results.sh
 
 # destroy the deployed infrastructure
 cd terraform
