@@ -11,6 +11,7 @@ import (
 	"os"
 	"runtime"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -50,7 +51,7 @@ func (p *DataPool) GetRandomSlice(rng *rand.Rand, length int) ([]byte, error) {
 
 type OperationResult struct {
 	OperationType string
-	Key           string
+	KeyID         uint64
 	FinishedAt    time.Time
 	Latency       time.Duration
 	Success       bool
@@ -66,14 +67,51 @@ func main() {
 	flag.Parse()
 
 	poolSize := *poolSizeMB * 1024 * 1024
+
+	addrs := strings.Split(*targetAddr, ",")
 	client, err := valkey.NewClient(valkey.ClientOption{
-		InitAddress: []string{*targetAddr},
+		InitAddress: addrs,
 		Password:    *password,
 	})
 	if err != nil {
-		panic(err)
+		panic(fmt.Errorf("error connecting to Valkey: %w", err))
 	}
 	defer client.Close()
+
+	// Get cluster size and server info after connecting
+	var clusterSize int
+	var serverInfoString string
+	info, err := client.Do(context.Background(), client.B().Arbitrary("CLUSTER", "INFO").Build()).ToString()
+	if err != nil {
+		if strings.Contains(err.Error(), "This instance has cluster support disabled") {
+			clusterSize = 1
+			// It's a standalone server, get regular INFO
+			standaloneInfo, infoErr := client.Do(context.Background(), client.B().Info().Build()).ToString()
+			if infoErr != nil {
+				panic(fmt.Errorf("failed to get standalone server info: %w", infoErr))
+			}
+			serverInfoString = standaloneInfo
+		} else {
+			panic(fmt.Errorf("failed to get cluster info: %w", err))
+		}
+	} else {
+		serverInfoString = info // It's a cluster, we already have the info
+		// Parse the info string to find cluster_size, using CutPrefix
+		for line := range strings.SplitSeq(info, "\r\n") {
+			if sizeStr, found := strings.CutPrefix(line, "cluster_size:"); found {
+				size, parseErr := strconv.Atoi(sizeStr)
+				if parseErr != nil {
+					panic(fmt.Errorf("failed to parse cluster_size '%s': %w", sizeStr, parseErr))
+				}
+				clusterSize = size
+				break
+			}
+		}
+		if clusterSize == 0 {
+			// Fallback for safety, e.g. if CLUSTER INFO command changes in a future Valkey version
+			clusterSize = len(addrs)
+		}
+	}
 
 	// setup data pool
 	var seed [32]byte
@@ -92,8 +130,9 @@ func main() {
 	if err != nil {
 		panic("Couldn't create a 'results' directory")
 	}
-	outputFile := fmt.Sprintf("results/results_%s_conc-%d_keys-%d_dur-%ds.csv",
+	outputFile := fmt.Sprintf("results/results_%s_nodes-%d_conc-%d_keys-%d_dur-%ds.csv",
 		benchmarkRunID,
+		clusterSize,
 		*concurrency,
 		*totalKeys,
 		int(duration.Seconds()),
@@ -121,12 +160,15 @@ func main() {
 			fmt.Fprintf(file, "#   GOMAXPROCS: %d\n", runtime.GOMAXPROCS(0))
 			fmt.Fprintf(file, "#   OS/Arch: %s/%s\n", runtime.GOOS, runtime.GOARCH)
 			fmt.Fprintf(file, "#   Output File: %s\n", outputFile) // Include generated filename
+			fmt.Fprintf(file, "#\n# Server / Cluster Info:\n# ------------------------\n")
+			commentedInfo := "# " + strings.ReplaceAll(strings.TrimSpace(serverInfoString), "\r\n", "\n# ")
+			fmt.Fprintf(file, "%s\n", commentedInfo)
 			fmt.Fprintf(file, "#-------------------------------------------------\n")
 
 			writer := csv.NewWriter(file)
 			defer writer.Flush()
 
-			header := []string{"FinishedAt", "OperationType", "Key", "Latency(us)", "Success"}
+			header := []string{"FinishedAt", "OperationType", "KeyID", "Latency(us)", "Success"}
 			if err := writer.Write(header); err != nil {
 				panic(fmt.Sprintf("Failed to write CSV header: %v", err))
 			}
@@ -137,7 +179,7 @@ func main() {
 				record := []string{
 					strconv.FormatInt(result.FinishedAt.Unix(), 10),
 					result.OperationType,
-					result.Key,
+					strconv.FormatUint(result.KeyID, 10),
 					strconv.FormatInt(result.Latency.Microseconds(), 10),
 					strconv.FormatBool(result.Success),
 				}
@@ -168,7 +210,8 @@ func main() {
 				progress := elapsed.Seconds() / duration.Seconds()
 				getProb := 0.1 + (progress * 0.8)
 
-				key := "prefix:" + fmt.Sprintf("%016d", z.Uint64())
+				keyID := z.Uint64()
+				key := "prefix:" + fmt.Sprintf("%016d", keyID)
 
 				var opType string
 				var opErr error
@@ -200,7 +243,7 @@ func main() {
 				resultsQueue <- OperationResult{
 					FinishedAt:    finishedAt,
 					OperationType: opType,
-					Key:           key,
+					KeyID:         keyID,
 					Latency:       latency,
 					Success:       opErr == nil,
 				}
