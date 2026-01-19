@@ -61,7 +61,7 @@ func main() {
 	targetAddr := flag.String("target-addr", "127.0.0.1:6379", "Address of the Valkey instance or a comma separated list of initial cluster nodes")
 	password := flag.String("password", "", "Password to use for authentication with valkey-server")
 	totalKeys := flag.Uint64("total-keys", 1000000, "Total key amount")
-	concurrency := flag.Int("concurrency", 1024, "Number of simultaneous workers")
+	concurrency := flag.Int("concurrency", 256, "Number of simultaneous workers")
 	poolSizeMB := flag.Int("pool-size", 100, "Data Pool size of random data in MB")
 	duration := flag.Duration("duration", 20*time.Minute, "Duration of the benchmark")
 	flag.Parse()
