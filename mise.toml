@@ -8,6 +8,14 @@ uv = "latest"
 [settings]
 python.uv_venv_auto = true
 
+[task_config]
+# NOTE: scripts defined in `scripts/` are used for production
+includes = [
+    "scripts"
+]
+
+# NOTE: Tasks defined in this file serve only the development needs
+
 [tasks.valkey-docker]
 description = "Run valkey docker image. This is used only for development"
 run = '''
@@ -38,20 +46,6 @@ terraform destroy --auto-approve
 terraform apply --auto-approve
 '''
 
-[tasks.wait-single]
-description = "Waits until the single sut node returns valkey info/is ready"
-run = '''
-#!/usr/bin/env bash
-until ./scripts/check-single.sh; do
-  sleep 1
-done
-'''
-
-[tasks.wait-cluster]
-description = "Waits until the cluster sut nodes returns valkey info/is ready"
-run = '''
-#!/usr/bin/env bash
-until ./scripts/check-single.sh; do
-  sleep 1
-done
-'''
+[tasks.destroy]
+description = "Destory the deployed infrastructure"
+run = "cd terraform && terraform destroy --auto-approve"

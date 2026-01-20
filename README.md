@@ -1,5 +1,7 @@
 ## Steps to run
 
+> WARNING: All scripts from `scripts/` should be run from the root directory
+
 You need to run the following steps only once (configure gcloud):
 
 ```bash
@@ -24,6 +26,10 @@ The following steps you need to run for each benchmark run:
 mise run redeploy
 
 # wait for the system to deploy fully
+# To approximate it you can use scripts
+mise run wait-single
+# OR
+mise run wait-cluster
 
 # connect the SUT nodes into a cluster if deploying in a cluster mode (default deployment is single node)
 # NOTE: skip this step if benchmarking a single node deployment

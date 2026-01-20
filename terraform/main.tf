@@ -107,3 +107,8 @@ output "sut_external_ips" {
   description = "The external IP addresses of the SUT instances."
   value       = [for instance in google_compute_instance.sut_nodes : instance.network_interface[0].access_config[0].nat_ip]
 }
+
+output "deployment_mode" {
+  description = "The deployment mode for Valkey."
+  value       = var.deployment_mode
+}
