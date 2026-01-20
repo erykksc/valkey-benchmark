@@ -5,8 +5,11 @@ python = "3"
 terraform = "latest"
 uv = "latest"
 
+[settings]
+python.uv_venv_auto = true
+
 [tasks.valkey-docker]
-description = "Run valkey docker image"
+description = "Run valkey docker image. This is used only for development"
 run = '''
 #!/usr/bin/env bash
 # Calculate the cores to use, equivalent to min(nproc-1, 1)
@@ -33,4 +36,22 @@ cd terraform
 terraform init
 terraform destroy --auto-approve 
 terraform apply --auto-approve
+'''
+
+[tasks.wait-single]
+description = "Waits until the single sut node returns valkey info/is ready"
+run = '''
+#!/usr/bin/env bash
+until ./scripts/check-single.sh; do
+  sleep 1
+done
+'''
+
+[tasks.wait-cluster]
+description = "Waits until the cluster sut nodes returns valkey info/is ready"
+run = '''
+#!/usr/bin/env bash
+until ./scripts/check-single.sh; do
+  sleep 1
+done
 '''

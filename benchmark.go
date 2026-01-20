@@ -57,21 +57,10 @@ type OperationResult struct {
 	Success       bool
 }
 
-func main() {
-	targetAddr := flag.String("target-addr", "127.0.0.1:6379", "Address of the Valkey instance or a comma separated list of initial cluster nodes")
-	password := flag.String("password", "", "Password to use for authentication with valkey-server")
-	totalKeys := flag.Uint64("total-keys", 1000000, "Total key amount")
-	concurrency := flag.Int("concurrency", 256, "Number of simultaneous workers")
-	poolSizeMB := flag.Int("pool-size", 100, "Data Pool size of random data in MB")
-	duration := flag.Duration("duration", 20*time.Minute, "Duration of the benchmark")
-	flag.Parse()
-
-	poolSize := *poolSizeMB * 1024 * 1024
-
-	addrs := strings.Split(*targetAddr, ",")
+func mustGetValkeyInfo(addreses []string, password string) string {
 	client, err := valkey.NewClient(valkey.ClientOption{
-		InitAddress: addrs,
-		Password:    *password,
+		InitAddress: addreses,
+		Password:    password,
 	})
 	if err != nil {
 		panic(fmt.Errorf("error connecting to Valkey: %w", err))
@@ -79,12 +68,9 @@ func main() {
 	defer client.Close()
 
 	// Get cluster size and server info after connecting
-	var clusterSize int
-	var serverInfoString string
-	info, err := client.Do(context.Background(), client.B().Arbitrary("CLUSTER", "INFO").Build()).ToString()
+	serverInfoString, err := client.Do(context.Background(), client.B().Arbitrary("CLUSTER", "INFO").Build()).ToString()
 	if err != nil {
 		if strings.Contains(err.Error(), "This instance has cluster support disabled") {
-			clusterSize = 1
 			// It's a standalone server, get regular INFO
 			standaloneInfo, infoErr := client.Do(context.Background(), client.B().Info().Build()).ToString()
 			if infoErr != nil {
@@ -94,24 +80,86 @@ func main() {
 		} else {
 			panic(fmt.Errorf("failed to get cluster info: %w", err))
 		}
-	} else {
-		serverInfoString = info // It's a cluster, we already have the info
-		// Parse the info string to find cluster_size, using CutPrefix
-		for line := range strings.SplitSeq(info, "\r\n") {
-			if sizeStr, found := strings.CutPrefix(line, "cluster_size:"); found {
-				size, parseErr := strconv.Atoi(sizeStr)
-				if parseErr != nil {
-					panic(fmt.Errorf("failed to parse cluster_size '%s': %w", sizeStr, parseErr))
-				}
-				clusterSize = size
-				break
+	}
+	return serverInfoString
+}
+
+func main() {
+	targetAddr := flag.String("target-addr", "127.0.0.1:6379", "Address of the Valkey instance or a comma separated list of initial cluster nodes")
+	password := flag.String("password", "", "Password to use for authentication with valkey-server")
+	totalKeys := flag.Uint64("total-keys", 1000000, "Total key amount")
+	concurrency := flag.Int("concurrency", 256, "Number of simultaneous workers")
+	poolSizeMB := flag.Int("pool-size-mb", 100, "Data Pool size of random data in MB")
+	duration := flag.Duration("duration", 20*time.Minute, "Duration of the benchmark")
+	outputFilename := flag.String("output", "benchmark-results.csv", "Output filepath for the benchmark results")
+	flag.Parse()
+
+	poolSize := *poolSizeMB * 1024 * 1024
+	addrs := strings.Split(*targetAddr, ",")
+
+	serverInfoString := mustGetValkeyInfo(addrs, *password)
+	benchmarkStartTime := time.Now()
+	benchmarkRunID := benchmarkStartTime.Format("20060102-150405")
+
+	var csvComment strings.Builder
+	fmt.Fprintf(&csvComment, "# Benchmark Configuration for Run ID: %s\n", benchmarkRunID)
+	fmt.Fprintf(&csvComment, "#   Target Address: %s\n", *targetAddr)
+	fmt.Fprintf(&csvComment, "#   Total Keys: %d\n", *totalKeys)
+	fmt.Fprintf(&csvComment, "#   Concurrency: %d\n", *concurrency)
+	fmt.Fprintf(&csvComment, "#   Data Pool Size (MB): %d\n", *poolSizeMB)
+	fmt.Fprintf(&csvComment, "#   Duration: %s\n", duration)
+	fmt.Fprintf(&csvComment, "#   Benchmark Start Time: %s\n", benchmarkStartTime.Format(time.RFC3339))
+	fmt.Fprintf(&csvComment, "#   Go Version: %s\n", runtime.Version())
+	fmt.Fprintf(&csvComment, "#   GOMAXPROCS: %d\n", runtime.GOMAXPROCS(0))
+	fmt.Fprintf(&csvComment, "#   OS/Arch: %s/%s\n", runtime.GOOS, runtime.GOARCH)
+	fmt.Fprintf(&csvComment, "#   Output File: %s\n", *outputFilename)
+	fmt.Fprintf(&csvComment, "#\n# Server / Cluster Info:\n# ------------------------\n")
+	commentedInfo := "# " + strings.ReplaceAll(strings.TrimSpace(serverInfoString), "\r\n", "\n# ")
+	fmt.Fprintf(&csvComment, "%s\n", commentedInfo)
+	fmt.Fprintf(&csvComment, "#-------------------------------------------------\n")
+
+	resultsQueue := make(chan OperationResult, *concurrency*100)
+	var resultsWg sync.WaitGroup
+
+	resultsWg.Go(func() {
+		file, err := os.Create(*outputFilename)
+		if err != nil {
+			panic(fmt.Sprintf("Failed to create output file '%s': %v", *outputFilename, err))
+		}
+		defer file.Close()
+
+		_, err = file.WriteString(csvComment.String())
+		if err != nil {
+			panic("couldn't write the top commen to the output file")
+		}
+
+		writer := csv.NewWriter(file)
+		defer writer.Flush()
+
+		header := []string{"FinishedAt", "OperationType", "KeyID", "Latency(us)", "Success"}
+		if err := writer.Write(header); err != nil {
+			panic(fmt.Sprintf("Failed to write CSV header: %v", err))
+		}
+
+		var opsCount uint64
+		for result := range resultsQueue {
+			opsCount++
+			record := []string{
+				strconv.FormatInt(result.FinishedAt.Unix(), 10),
+				result.OperationType,
+				strconv.FormatUint(result.KeyID, 10),
+				strconv.FormatInt(result.Latency.Microseconds(), 10),
+				strconv.FormatBool(result.Success),
+			}
+			if err := writer.Write(record); err != nil {
+				panic(fmt.Sprintf("Error writing record to CSV: %v\n", err))
 			}
 		}
-		if clusterSize == 0 {
-			// Fallback for safety, e.g. if CLUSTER INFO command changes in a future Valkey version
-			clusterSize = len(addrs)
-		}
-	}
+		fmt.Printf("\n[Processor] Finished writing %d results to %s\n", opsCount, *outputFilename)
+	})
+
+	ctx := context.Background()
+	var workersWg sync.WaitGroup
 
 	// setup data pool
 	var seed [32]byte
@@ -123,83 +171,21 @@ func main() {
 	// setup zipf distribution for keys to simulate hot keys
 	z := rand.NewZipf(rand.New(rand.NewPCG(SEED1, SEED2)), 1.1, 1.0, *totalKeys)
 
-	benchmarkStartTime := time.Now()
-	benchmarkRunID := benchmarkStartTime.Format("20060102-150405") // Unique ID for this run
-
-	err = os.MkdirAll("results", 0755)
-	if err != nil {
-		panic("Couldn't create a 'results' directory")
-	}
-	outputFile := fmt.Sprintf("results/results_%s_nodes-%d_conc-%d_keys-%d_dur-%ds.csv",
-		benchmarkRunID,
-		clusterSize,
-		*concurrency,
-		*totalKeys,
-		int(duration.Seconds()),
-	)
-
-	resultsQueue := make(chan OperationResult, *concurrency*100)
-	var resultsWg sync.WaitGroup
-
-	resultsWg.Go(
-		func() {
-			file, err := os.Create(outputFile)
-			if err != nil {
-				panic(fmt.Sprintf("Failed to create output file '%s': %v", outputFile, err))
-			}
-			defer file.Close()
-
-			fmt.Fprintf(file, "# Benchmark Configuration for Run ID: %s\n", benchmarkRunID)
-			fmt.Fprintf(file, "#   Target Address: %s\n", *targetAddr)
-			fmt.Fprintf(file, "#   Total Keys: %d\n", *totalKeys)
-			fmt.Fprintf(file, "#   Concurrency: %d\n", *concurrency)
-			fmt.Fprintf(file, "#   Data Pool Size (MB): %d\n", *poolSizeMB)
-			fmt.Fprintf(file, "#   Duration: %s\n", duration)
-			fmt.Fprintf(file, "#   Benchmark Start Time: %s\n", benchmarkStartTime.Format(time.RFC3339))
-			fmt.Fprintf(file, "#   Go Version: %s\n", runtime.Version())
-			fmt.Fprintf(file, "#   GOMAXPROCS: %d\n", runtime.GOMAXPROCS(0))
-			fmt.Fprintf(file, "#   OS/Arch: %s/%s\n", runtime.GOOS, runtime.GOARCH)
-			fmt.Fprintf(file, "#   Output File: %s\n", outputFile) // Include generated filename
-			fmt.Fprintf(file, "#\n# Server / Cluster Info:\n# ------------------------\n")
-			commentedInfo := "# " + strings.ReplaceAll(strings.TrimSpace(serverInfoString), "\r\n", "\n# ")
-			fmt.Fprintf(file, "%s\n", commentedInfo)
-			fmt.Fprintf(file, "#-------------------------------------------------\n")
-
-			writer := csv.NewWriter(file)
-			defer writer.Flush()
-
-			header := []string{"FinishedAt", "OperationType", "KeyID", "Latency(us)", "Success"}
-			if err := writer.Write(header); err != nil {
-				panic(fmt.Sprintf("Failed to write CSV header: %v", err))
-			}
-
-			var opsCount uint64
-			for result := range resultsQueue {
-				opsCount++
-				record := []string{
-					strconv.FormatInt(result.FinishedAt.Unix(), 10),
-					result.OperationType,
-					strconv.FormatUint(result.KeyID, 10),
-					strconv.FormatInt(result.Latency.Microseconds(), 10),
-					strconv.FormatBool(result.Success),
-				}
-				if err := writer.Write(record); err != nil {
-					panic(fmt.Sprintf("Error writing record to CSV: %v\n", err))
-				}
-			}
-			fmt.Printf("\n[Processor] Finished writing %d results to %s\n", opsCount, outputFile)
-		})
-
-	ctx := context.Background()
-	var workersWg sync.WaitGroup
-
 	fmt.Printf("Benchmark started (Run ID: %s): %d workers for %v\n", benchmarkRunID, *concurrency, duration)
-	fmt.Printf("Target: %s | Keys: %d | Pool: %dMB | Output: %s\n", *targetAddr, *totalKeys, *poolSizeMB, outputFile)
+	fmt.Printf("Target: %s | Keys: %d | Pool: %dMB | Output: %s\n", *targetAddr, *totalKeys, *poolSizeMB, *outputFilename)
 
-	for i := 0; i < *concurrency; i++ {
+	for workerID := 0; workerID < *concurrency; workerID++ {
 		workersWg.Go(func() {
 			// each worker gets its own data generator for data
-			rng := rand.New(rand.NewPCG(SEED1, uint64(i)))
+			rng := rand.New(rand.NewPCG(SEED1, uint64(workerID)))
+			client, err := valkey.NewClient(valkey.ClientOption{
+				InitAddress: addrs,
+				Password:    *password,
+			})
+			if err != nil {
+				panic(fmt.Errorf("error connecting to Valkey in worder %d: %w", workerID, err))
+			}
+			defer client.Close()
 			for {
 				elapsed := time.Since(benchmarkStartTime)
 				if elapsed >= *duration {
