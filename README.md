@@ -23,13 +23,18 @@ The following steps you need to run for each benchmark run:
 ```bash
 # destroy the previous deployment and deploy the cloud resources again
 # NOTE: you can see the individual steps in `./mise.toml` file if you don't want to use `mise`
-mise run redeploy
+mise run redeploy # only for development purposes
+# NOTE: for pruduction run
+cd terraform
+terraform apply \
+    -var="sut_instance_count=3" \
+    -var="sut_machine_type=t2d-standard-1" \
+    -var="deployment_mode=cluster"
+cd ..
 
 # wait for the system to deploy fully
-# To approximate it you can use scripts
-mise run wait-single
-# OR
-mise run wait-cluster
+# To approximate it you can use the script
+./scripts/wait-valkey.sh
 
 # connect the SUT nodes into a cluster if deploying in a cluster mode (default deployment is single node)
 # NOTE: skip this step if benchmarking a single node deployment

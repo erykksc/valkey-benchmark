@@ -25,7 +25,7 @@ variable "sut_machine_type" {
 variable "client_machine_type" {
   description = "The machine type for the client (load generator) instance."
   type        = string
-  default     = "t2d-standard-2"
+  default     = "t2d-standard-1"
 }
 
 variable "boot_disk_size_gb" {
