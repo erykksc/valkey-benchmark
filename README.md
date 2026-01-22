@@ -31,7 +31,7 @@ The following steps you need to run for each benchmark run:
     mise build
     cd terraform
     terraform apply \
-        -var="client_machine_type=t2d-standard-8" \
+        -var="client_machine_type=c4-highcpu-4" \
         -var="sut_instance_count=3" \
         -var="sut_machine_type=t2d-standard-1" \
         -var="deployment_mode=cluster" \
@@ -92,6 +92,8 @@ For single node I would like to run:
 
 For cluster:
 3x t2d-standard-1 ~= 134$/month
+
+[Here](https://gcloud-compute.com/instances.html) are the prices.
 
 ### Docker vs Bare Metal
 
