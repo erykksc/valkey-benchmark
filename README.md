@@ -23,9 +23,12 @@ The following steps you need to run for each benchmark run:
 ```bash
 # destroy the previous deployment and deploy the cloud resources again
 # NOTE: you can see the individual steps in `./mise.toml` file if you don't want to use `mise`
-mise run redeploy # only for development purposes
+# mise run redeploy # only for development purposes
+
 # NOTE: for pruduction run
+# deployment_mode can be either 'cluster' or 'single'
 (
+    mise build
     cd terraform
     terraform apply \
         -var="client_machine_type=t2d-standard-8" \

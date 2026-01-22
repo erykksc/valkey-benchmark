@@ -70,20 +70,21 @@ func mustGetValkeyInfo(addreses []string, password string) string {
 	var serverInfoString strings.Builder
 
 	// Get cluster info
-	serverInfoString.WriteString("CLUSTER INFO:")
+	serverInfoString.WriteString("CLUSTER INFO:\n")
 	clusterInfo, err := client.Do(context.Background(), client.B().Arbitrary("CLUSTER", "INFO").Build()).ToString()
 	if err == nil {
 		serverInfoString.WriteString(clusterInfo)
+		serverInfoString.WriteString("\n")
 	} else {
 		if strings.Contains(err.Error(), "This instance has cluster support disabled") {
-			serverInfoString.WriteString("This instance has cluster support disabled")
+			serverInfoString.WriteString("This instance has cluster support disabled\n")
 		} else {
 			panic(fmt.Errorf("failed to get cluster info: %w", err))
 		}
 	}
 
 	// Get first server info
-	serverInfoString.WriteString("VALKEY SERVER INFO (of one SUT node):")
+	serverInfoString.WriteString("\nVALKEY SERVER INFO (of one SUT node):\n")
 	serverInfo, err := client.Do(context.Background(), client.B().Info().Build()).ToString()
 	if err != nil {
 		panic(fmt.Errorf("failed to get standalone server info: %w", err))
@@ -124,7 +125,8 @@ func main() {
 	fmt.Fprintf(&csvComment, "#   OS/Arch: %s/%s\n", runtime.GOOS, runtime.GOARCH)
 	fmt.Fprintf(&csvComment, "#   Output File: %s\n", *outputFilename)
 	fmt.Fprintf(&csvComment, "#\n# Cluster Info / Server Info:\n# ------------------------\n")
-	commentedInfo := "# " + strings.ReplaceAll(strings.TrimSpace(serverInfoString), "\r\n", "\n# ")
+	commentedInfo := "# " + strings.ReplaceAll(strings.TrimSpace(serverInfoString), "\n", "\n# ")
+	commentedInfo = strings.ReplaceAll(commentedInfo, "\r", "")
 	fmt.Fprintf(&csvComment, "%s\n", commentedInfo)
 	fmt.Fprintf(&csvComment, "#-------------------------------------------------\n")
 

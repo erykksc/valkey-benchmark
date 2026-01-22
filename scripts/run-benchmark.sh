@@ -35,7 +35,8 @@ echo "  Cores: $CORES"
 echo "  RAM: $RAM"
 echo "  NODE_COUNT: $NODE_COUNT"
 
-FILENAME="results/${NODE_COUNT}x${CPU}_${CORES}cores_${RAM}.csv"
+TIMESTAMP=$(date +"%Y-%m-%d_%H-%M")
+FILENAME="results/${NODE_COUNT}x${CPU}_${CORES}cores_${RAM}_${TIMESTAMP}.csv"
 echo "Results filename: $FILENAME"
 
 command_args=(my-valkey-benchmark
