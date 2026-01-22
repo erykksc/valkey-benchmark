@@ -29,7 +29,7 @@ command_args=(
 	--no-auth-warning
 	--pass 'csb-benchmark'
 	-h "$first_node"
-	info server
+	info
 )
 
 gcloud compute ssh valkey-client-node --zone=europe-west3-c --command="${command_args[*]}"

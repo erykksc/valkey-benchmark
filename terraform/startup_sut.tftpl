@@ -2,6 +2,8 @@
 
 apt-get update
 apt-get upgrade -y
+apt-get install -y \
+  btop
 
 # Add iptables rules to allow Valkey traffic
 iptables -A INPUT -p tcp --dport 6379 -j ACCEPT  # For client connections
@@ -16,31 +18,45 @@ touch /valkey-installed
 # Required by valkey
 sysctl vm.overcommit_memory=1
 
-# Calculate the cores to use, equivalent to min(max(nproc/4, 1), 4)
+# Calculate the cores to use, equivalent to min(nproc/4, 8)
 NUM_CORES=$(nproc)
-QUARTER_CORES=$((NUM_CORES / 4))
-MAX_VAL=$((QUARTER_CORES > 1 ? QUARTER_CORES : 1))
-RESULT=$((MAX_VAL < 4 ? MAX_VAL : 4))
+IDLE_CORES=$((NUM_CORES / 4))
+if [ "$IDLE_CORES" -gt 8 ]; then
+  IDLE_CORES=8
+fi
+IO_THREADS=$((NUM_CORES - IDLE_CORES))
+
+# Reserve 0.2 of total memory for system, capped at MAX_RESERVED_MB
+MAX_RESERVED_MB=4096 # 4GB in MB
+TOTAL_MEM_MB=$(free -m | awk '/^Mem:/ {print $2}')
+RESERVED_MB=$(awk -v mem="$TOTAL_MEM_MB" 'BEGIN { printf "%d\n", mem * 0.2 }')
+if [ "$RESERVED_MB" -gt "$MAX_RESERVED_MB" ]; then
+  RESERVED_MB=$MAX_RESERVED_MB
+fi
+MAX_MEMORY_MB=$((TOTAL_MEM_MB - RESERVED_MB))
+echo "Total RAM: $${TOTAL_MEM_MB}MB, setting maxmemory to $${MAX_MEMORY_MB}MB"
 
 # NOTE: ${deployment_mode} is a template variable from terraform's templatefile()
 if [[ "${deployment_mode}" == "cluster" ]]; then
   echo "Starting Valkey in cluster mode"
 
   valkey-server \
+    --maxmemory "$${MAX_MEMORY_MB}mb" \
+    --maxmemory-policy allkeys-lru \
     --cluster-enabled yes \
     --cluster-config-file nodes.conf \
     --cluster-node-timeout 5000 \
-    --io-threads "$RESULT" \
-    --requirepass "csb-benchmark" \
-    --appendonly yes
+    --io-threads "$IO_THREADS" \
+    --requirepass "csb-benchmark"
 
 elif [[ "${deployment_mode}" == "single" ]]; then
   echo "Starting Valkey in single mode"
 
   valkey-server \
-    --io-threads "$RESULT" \
-    --requirepass "csb-benchmark" \
-    --appendonly yes
+    --maxmemory "$${MAX_MEMORY_MB}mb" \
+    --maxmemory-policy allkeys-lru \
+    --io-threads "$IO_THREADS" \
+    --requirepass "csb-benchmark"
 
 else
   echo "ERROR: Unknown deployment_mode '${deployment_mode}'"

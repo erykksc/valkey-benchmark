@@ -41,7 +41,7 @@ echo "Results filename: $FILENAME"
 command_args=(my-valkey-benchmark
 	-target-addr "$sut_nodes_comma"
 	-password 'csb-benchmark'
-	-total-keys 1000000
+	-total-keys 100000000
 	-concurrency 256
 	-pool-size-mb 100
 	-duration 20m

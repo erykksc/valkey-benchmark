@@ -61,7 +61,7 @@ resource "google_compute_instance" "sut_nodes" {
       image = var.instance_image_sut
     }
   }
-  metadata_startup_script = templatefile("startup_sut.sh", {
+  metadata_startup_script = templatefile("startup_sut.tftpl", {
     deployment_mode        = var.deployment_mode
     valkey_binaries_bucket = google_storage_bucket.valkey_binaries.name
   })
@@ -85,7 +85,7 @@ resource "google_compute_instance" "client" {
       size  = var.boot_disk_size_gb
     }
   }
-  metadata_startup_script = templatefile("startup_client.sh", {
+  metadata_startup_script = templatefile("startup_client.tftpl", {
     valkey_binaries_bucket = google_storage_bucket.valkey_binaries.name
   })
 
