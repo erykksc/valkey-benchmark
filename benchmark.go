@@ -67,21 +67,30 @@ func mustGetValkeyInfo(addreses []string, password string) string {
 	}
 	defer client.Close()
 
-	// Get cluster size and server info after connecting
-	serverInfoString, err := client.Do(context.Background(), client.B().Arbitrary("CLUSTER", "INFO").Build()).ToString()
-	if err != nil {
+	var serverInfoString strings.Builder
+
+	// Get cluster info
+	serverInfoString.WriteString("CLUSTER INFO:")
+	clusterInfo, err := client.Do(context.Background(), client.B().Arbitrary("CLUSTER", "INFO").Build()).ToString()
+	if err == nil {
+		serverInfoString.WriteString(clusterInfo)
+	} else {
 		if strings.Contains(err.Error(), "This instance has cluster support disabled") {
-			// It's a standalone server, get regular INFO
-			standaloneInfo, infoErr := client.Do(context.Background(), client.B().Info().Build()).ToString()
-			if infoErr != nil {
-				panic(fmt.Errorf("failed to get standalone server info: %w", infoErr))
-			}
-			serverInfoString = standaloneInfo
+			serverInfoString.WriteString("This instance has cluster support disabled")
 		} else {
 			panic(fmt.Errorf("failed to get cluster info: %w", err))
 		}
 	}
-	return serverInfoString
+
+	// Get first server info
+	serverInfoString.WriteString("VALKEY SERVER INFO (of one SUT node):")
+	serverInfo, err := client.Do(context.Background(), client.B().Info().Build()).ToString()
+	if err != nil {
+		panic(fmt.Errorf("failed to get standalone server info: %w", err))
+	}
+	serverInfoString.WriteString(serverInfo)
+
+	return serverInfoString.String()
 }
 
 func main() {
@@ -102,6 +111,7 @@ func main() {
 	benchmarkRunID := benchmarkStartTime.Format("20060102-150405")
 
 	var csvComment strings.Builder
+	fmt.Fprintf(&csvComment, "# Load Generator Config:\n# ------------------------\n")
 	fmt.Fprintf(&csvComment, "# Benchmark Configuration for Run ID: %s\n", benchmarkRunID)
 	fmt.Fprintf(&csvComment, "#   Target Address: %s\n", *targetAddr)
 	fmt.Fprintf(&csvComment, "#   Total Keys: %d\n", *totalKeys)
@@ -113,7 +123,7 @@ func main() {
 	fmt.Fprintf(&csvComment, "#   GOMAXPROCS: %d\n", runtime.GOMAXPROCS(0))
 	fmt.Fprintf(&csvComment, "#   OS/Arch: %s/%s\n", runtime.GOOS, runtime.GOARCH)
 	fmt.Fprintf(&csvComment, "#   Output File: %s\n", *outputFilename)
-	fmt.Fprintf(&csvComment, "#\n# Server / Cluster Info:\n# ------------------------\n")
+	fmt.Fprintf(&csvComment, "#\n# Cluster Info / Server Info:\n# ------------------------\n")
 	commentedInfo := "# " + strings.ReplaceAll(strings.TrimSpace(serverInfoString), "\r\n", "\n# ")
 	fmt.Fprintf(&csvComment, "%s\n", commentedInfo)
 	fmt.Fprintf(&csvComment, "#-------------------------------------------------\n")
