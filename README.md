@@ -25,12 +25,15 @@ The following steps you need to run for each benchmark run:
 # NOTE: you can see the individual steps in `./mise.toml` file if you don't want to use `mise`
 mise run redeploy # only for development purposes
 # NOTE: for pruduction run
-cd terraform
-terraform apply \
-    -var="sut_instance_count=3" \
-    -var="sut_machine_type=t2d-standard-1" \
-    -var="deployment_mode=cluster"
-cd ..
+(
+    cd terraform
+    terraform apply \
+        -var="client_machine_type=t2d-standard-8" \
+        -var="sut_instance_count=3" \
+        -var="sut_machine_type=t2d-standard-1" \
+        -var="deployment_mode=cluster" \
+        --auto-approve
+)
 
 # wait for the system to deploy fully
 # To approximate it you can use the script
@@ -97,6 +100,13 @@ For future research one could look into running it on bare metal to check the di
 I've chosen Google's COS, as it is optimized for running containers and has minimal amount of other services running, reducing the impact on the benchmark.
 For the client node I've went with Debian, as I don't need so many optimizations and it comes with some basic tools added.
 
+### IO-Threads
+
+According to some benchmarks from the community, setting more io-threads than 8 provides diminishing returns:
+https://riferrei.com/the-engineering-wisdom-behind-rediss-single-threaded-design/
+
+This uses Amdahl's Law.
+
 ### Cluster Size
 
 Note that the minimal cluster that works as expected must contain at least three primary nodes. For deployment, we strongly recommend a six-node cluster, with three primaries and three replicas.
@@ -120,3 +130,4 @@ Starts with 10% GET and 90% SET and linearliy shifts to 90% GET and 10% SET
 
 1. Pin the Process: Use taskset to lock the Valkey process to a single physical core to prevent the OS from moving it around, which ruins benchmark consistency.
 2. Titanium Advantage: C4 uses Google's "Titanium" offload engine. This moves networking and storage tasks to dedicated hardware, leaving the CPU 100% free for your code.
+3. Calculate and decide on the key count to use
