@@ -26,13 +26,10 @@ if [ "$IDLE_CORES" -gt 8 ]; then
 fi
 IO_THREADS=$((NUM_CORES - IDLE_CORES))
 
-# Reserve 0.2 of total memory for system, capped at MAX_RESERVED_MB
-MAX_RESERVED_MB=4096 # 4GB in MB
+# Reserve 1GB+0.1*total-memory for system, capped at MAX_RESERVED_MB
 TOTAL_MEM_MB=$(free -m | awk '/^Mem:/ {print $2}')
-RESERVED_MB=$(awk -v mem="$TOTAL_MEM_MB" 'BEGIN { printf "%d\n", mem * 0.2 }')
-if [ "$RESERVED_MB" -gt "$MAX_RESERVED_MB" ]; then
-  RESERVED_MB=$MAX_RESERVED_MB
-fi
+RESERVED_MB=$(awk -v mem="$TOTAL_MEM_MB" 'BEGIN { printf "%d\n", mem * 0.1 }')
+RESERVED_MB=$((RESERVED_MB + 1024))
 MAX_MEMORY_MB=$((TOTAL_MEM_MB - RESERVED_MB))
 echo "Total RAM: $${TOTAL_MEM_MB}MB, setting maxmemory to $${MAX_MEMORY_MB}MB"
 
