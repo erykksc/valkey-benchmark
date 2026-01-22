@@ -1,7 +1,6 @@
 [tools]
 gcloud = "latest"
 go = "latest"
-python = "3"
 terraform = "latest"
 uv = "latest"
 
@@ -20,15 +19,16 @@ includes = [
 description = "Run valkey docker image. This is used only for development"
 run = '''
 #!/usr/bin/env bash
-# Calculate the cores to use, equivalent to min(nproc-1, 1)
+# Calculate the cores to use, equivalent to min(nproc/4, 8)
 NUM_CORES=$(nproc)
-CORES_MINUS_ONE=$((NUM_CORES - 1))
-RESULT=$((CORES_MINUS_ONE < 1 ? 1 : CORES_MINUS_ONE))
+IDLE_CORES=$((NUM_CORES / 4))
+if [ "$IDLE_CORES" -gt 8 ]; then
+  IDLE_CORES=8
+fi
+IO_THREADS=$((NUM_CORES - IDLE_CORES))
 
 docker run --rm -p 6379:6379 valkey/valkey:9.0.1 \
-    --io-threads "$RESULT" \
-    --requirepass "csb-benchmark" \
-    --appendonly yes
+    --io-threads "$IO_THREADS"
 '''
 
 [tasks.build]
