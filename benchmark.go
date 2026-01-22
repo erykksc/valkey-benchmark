@@ -118,7 +118,7 @@ func main() {
 	fmt.Fprintf(&csvComment, "#   Total Keys: %d\n", *totalKeys)
 	fmt.Fprintf(&csvComment, "#   Concurrency: %d\n", *concurrency)
 	fmt.Fprintf(&csvComment, "#   Data Pool Size (MB): %d\n", *poolSizeMB)
-	fmt.Fprintf(&csvComment, "#   Duration: %s\n", duration)
+	fmt.Fprintf(&csvComment, "#   Duration: %s\n", *duration)
 	fmt.Fprintf(&csvComment, "#   Benchmark Start Time: %s\n", benchmarkStartTime.Format(time.RFC3339))
 	fmt.Fprintf(&csvComment, "#   Go Version: %s\n", runtime.Version())
 	fmt.Fprintf(&csvComment, "#   GOMAXPROCS: %d\n", runtime.GOMAXPROCS(0))
@@ -183,7 +183,7 @@ func main() {
 	// setup zipf distribution for keys to simulate hot keys
 	z := rand.NewZipf(rand.New(rand.NewPCG(SEED1, SEED2)), 1.1, 1.0, *totalKeys)
 
-	fmt.Printf("Benchmark started (Run ID: %s): %d workers for %v\n", benchmarkRunID, *concurrency, duration)
+	fmt.Printf("Benchmark started (Run ID: %s): %d workers for %v\n", benchmarkRunID, *concurrency, *duration)
 	fmt.Printf("Target: %s | Keys: %d | Pool: %dMB | Output: %s\n", *targetAddr, *totalKeys, *poolSizeMB, *outputFilename)
 
 	for workerID := 0; workerID < *concurrency; workerID++ {
