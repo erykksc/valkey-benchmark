@@ -52,4 +52,4 @@ run = "cd terraform && terraform destroy --auto-approve"
 
 [tasks.monitor]
 description = "Enter monitoring of the client node"
-run = "gcloud compute ssh valkey-client-node --zone=europe-west3-c --command='btop'"
+run = "gcloud compute ssh valkey-client-node --zone=europe-west3-c --ssh-flag='-t' --command='btop'"
