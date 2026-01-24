@@ -171,6 +171,8 @@ func main() {
 	})
 
 	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(ctx, *duration)
+	defer cancel()
 	var workersWg sync.WaitGroup
 
 	// setup data pool
@@ -199,51 +201,51 @@ func main() {
 			}
 			defer client.Close()
 			for {
-				elapsed := time.Since(benchmarkStartTime)
-				if elapsed >= *duration {
+				select {
+				case <-ctx.Done():
 					return
-				}
+				default:
+					// Linear probability shift from write-heavy to read-heavy.
+					progress := time.Since(benchmarkStartTime).Seconds() / duration.Seconds()
+					getProb := 0.1 + (progress * 0.8)
 
-				// Linear probability shift from write-heavy to read-heavy.
-				progress := elapsed.Seconds() / duration.Seconds()
-				getProb := 0.1 + (progress * 0.8)
+					keyID := z.Uint64()
+					key := "prefix:" + fmt.Sprintf("%016d", keyID)
 
-				keyID := z.Uint64()
-				key := "prefix:" + fmt.Sprintf("%016d", keyID)
+					var opType string
+					var opErr error
 
-				var opType string
-				var opErr error
+					startOp := time.Now()
+					if rng.Float64() < getProb {
+						// Perform a GET operation.
+						opType = "GET"
+						opErr = client.Do(ctx, client.B().Get().Key(key).Build()).Error()
+					} else {
+						// Perform a SET operation.
+						opType = "SET"
+						var valSize int
+						// Bimodal distribution for value sizes.
+						const KiB = 1024
+						valSize = int(rng.NormFloat64()*(0.75*KiB) + (1.5 * KiB))
+						valSize = max(2, valSize)         // Minimal byte size, 2 because of an empty JSON '{}'
+						valSize = min(pool.size, valSize) // Maximal byte size
 
-				startOp := time.Now()
-				if rng.Float64() < getProb {
-					// Perform a GET operation.
-					opType = "GET"
-					opErr = client.Do(ctx, client.B().Get().Key(key).Build()).Error()
-				} else {
-					// Perform a SET operation.
-					opType = "SET"
-					var valSize int
-					// Bimodal distribution for value sizes.
-					const KiB = 1024
-					valSize = int(rng.NormFloat64()*(0.75*KiB) + (1.5 * KiB))
-					valSize = max(2, valSize)         // Minimal byte size, 2 because of an empty JSON '{}'
-					valSize = min(pool.size, valSize) // Maximal byte size
-
-					val, err := pool.GetRandomSlice(rng, valSize)
-					if err != nil {
-						panic(err.Error())
+						val, err := pool.GetRandomSlice(rng, valSize)
+						if err != nil {
+							panic(err.Error())
+						}
+						opErr = client.Do(ctx, client.B().Set().Key(key).Value(valkey.BinaryString(val)).Build()).Error()
 					}
-					opErr = client.Do(ctx, client.B().Set().Key(key).Value(valkey.BinaryString(val)).Build()).Error()
-				}
-				finishedAt := time.Now()
-				latency := finishedAt.Sub(startOp)
+					finishedAt := time.Now()
+					latency := finishedAt.Sub(startOp)
 
-				resultsQueue <- OperationResult{
-					FinishedAt:    finishedAt,
-					OperationType: opType,
-					KeyID:         keyID,
-					Latency:       latency,
-					Success:       opErr == nil,
+					resultsQueue <- OperationResult{
+						FinishedAt:    finishedAt,
+						OperationType: opType,
+						KeyID:         keyID,
+						Latency:       latency,
+						Success:       opErr == nil,
+					}
 				}
 			}
 		})
