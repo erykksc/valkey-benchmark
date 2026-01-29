@@ -1,7 +1,7 @@
 [tools]
-gcloud = "latest"
-go = "latest"
-terraform = "latest"
+gcloud = "552"
+go = "1.25"
+terraform = "1.14"
 uv = "latest"
 
 [settings]
@@ -52,4 +52,4 @@ run = "cd terraform && terraform destroy --auto-approve"
 
 [tasks.monitor]
 description = "Enter monitoring of the client node"
-run = "gcloud compute ssh valkey-client-node --zone=europe-west3-c --ssh-flag='-t' --command='btop'"
+run = "gcloud compute ssh valkey-client-node --zone=us-west1-c --ssh-flag='-t' --command='btop'"

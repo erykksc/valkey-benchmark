@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 gcloud compute scp \
-	--zone europe-west3-c \
+	--zone us-west1-c \
 	--recurse \
 	--compress \
 	valkey-client-node:~/results .

@@ -2,7 +2,7 @@
 
 sut_nodes=$(
 	gcloud compute instances list \
-		--zones=europe-west3-c \
+		--zones=us-west1-c \
 		--format="csv(name,networkInterfaces[0].accessConfigs[0].natIP)" |
 		grep sut-node |
 		cut -d, -f 2 |
@@ -22,4 +22,4 @@ command_args=(
 	--cluster-yes
 )
 
-gcloud compute ssh valkey-client-node --zone=europe-west3-c --command="${command_args[*]}"
+gcloud compute ssh valkey-client-node --zone=us-west1-c --command="${command_args[*]}"

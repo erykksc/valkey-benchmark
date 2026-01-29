@@ -9,6 +9,7 @@
 crash.log
 
 *.png
+*.csv
 
 .venv/
 

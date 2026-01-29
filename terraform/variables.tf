@@ -7,13 +7,13 @@ variable "project_id" {
 variable "region" {
   description = "The Google Cloud region to deploy resources in."
   type        = string
-  default     = "europe-west3"
+  default     = "us-west1"
 }
 
 variable "zone" {
   description = "The Google Cloud zone to deploy resources in."
   type        = string
-  default     = "europe-west3-c"
+  default     = "us-west1-c"
 }
 
 variable "sut_machine_type" {

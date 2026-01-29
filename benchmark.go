@@ -188,7 +188,8 @@ func main() {
 	fmt.Printf("Benchmark started (Run ID: %s): %d workers for %v\n", benchmarkRunID, *concurrency, *duration)
 	fmt.Printf("Target: %s | Keys: %d | Pool: %dMB | Output: %s\n", *targetAddr, *totalKeys, *poolSizeMB, *outputFilename)
 
-	for workerID := 0; workerID < *concurrency; workerID++ {
+	for i := 0; i < *concurrency; i++ {
+		workerID := i
 		workersWg.Go(func() {
 			// each worker gets its own data generator for data
 			rng := rand.New(rand.NewPCG(SEED1, uint64(workerID)))

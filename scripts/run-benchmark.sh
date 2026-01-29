@@ -4,7 +4,7 @@ set -e
 
 sut_nodes_newline=$(
 	gcloud compute instances list \
-		--zones=europe-west3-c \
+		--zones=us-west1-c \
 		--format="csv(name,networkInterfaces[0].accessConfigs[0].natIP)" |
 		grep sut-node |
 		cut -d, -f 2 |
@@ -19,7 +19,7 @@ echo "SUT nodes (comma-separated):"
 echo "$sut_nodes_comma"
 
 echo "Fetching hardware info from sut-node-1"
-REMOTE_VARS=$(gcloud compute ssh valkey-sut-node-1 --zone=europe-west3-c --command="
+REMOTE_VARS=$(gcloud compute ssh valkey-sut-node-1 --zone=us-west1-c --command="
 	  REMOTE_CPU=\$(lscpu | grep 'Model name' | awk -F: '{print \$2}' | xargs | awk '{print \$1\"-\"\$2\"-\"\$3}');
       REMOTE_CORES=\$(nproc);
       REMOTE_RAM=\$(free -h | awk '/^Mem:/ {print \$2}' | sed 's/\./p/');
@@ -50,5 +50,5 @@ command_args=(my-valkey-benchmark
 )
 
 # create results directory
-gcloud compute ssh valkey-client-node --zone=europe-west3-c --command="mkdir -p results"
-gcloud compute ssh valkey-client-node --zone=europe-west3-c --command="${command_args[*]}"
+gcloud compute ssh valkey-client-node --zone=us-west1-c --command="mkdir -p results"
+gcloud compute ssh valkey-client-node --zone=us-west1-c --command="${command_args[*]}"
