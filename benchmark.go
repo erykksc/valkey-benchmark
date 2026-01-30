@@ -99,7 +99,7 @@ func main() {
 	password := flag.String("password", "", "Password to use for authentication with valkey-server")
 	totalKeys := flag.Uint64("total-keys", 1000000, "Total key amount")
 	concurrency := flag.Int("concurrency", 256, "Number of simultaneous workers")
-	poolSizeMB := flag.Int("pool-size-mb", 100, "Data Pool size of random data in MB")
+	poolSizeMB := flag.Int("pool-size-mb", 100, "Data Pool size of random data in MiB")
 	duration := flag.Duration("duration", 20*time.Minute, "Duration of the benchmark")
 	outputFilename := flag.String("output", "benchmark-results.csv", "Output filepath for the benchmark results")
 	flag.Parse()

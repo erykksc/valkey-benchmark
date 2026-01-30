@@ -102,6 +102,8 @@ Furthermore it always uses `Always AMD EPYC (Milan)` processor type, compared to
 As I benchmark pure in-memory througput (Persistance will be OFF), I've decided not to use a VM with SSD attached.
 
 For the load-generator I've chosen t2d-standard-48.
+The 't2d-standard' has been chosen due to relative high amount of t2d-standard vcpu quoto on GCP.
+Increasing quota was a struggle so we decided to use this one as it was fast enought and wasn't a bottlneck according to monitoring.
 
 The network bandwidth of the load-generator node is 32 Gbps, which was below during the benchmark runs.
 
