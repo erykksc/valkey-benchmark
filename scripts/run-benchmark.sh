@@ -44,7 +44,7 @@ command_args=(my-valkey-benchmark
 	-password 'csb-benchmark'
 	-total-keys 100000000
 	-concurrency 256
-	-pool-size-mb 100
+	-pool-size-mb 1024
 	-duration 20m
 	-output "$FILENAME"
 )
