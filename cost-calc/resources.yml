@@ -1,0 +1,31 @@
+region: us-west1
+project: valkey-benchmark
+instances:
+  - name: t2d-standard-1
+    type: t2d-standard-1
+    commitment: 3
+    os: rhel
+  - name: t2d-standard-2
+    type: t2d-standard-2
+    commitment: 3
+    os: rhel
+  - name: t2d-standard-4
+    type: t2d-standard-4
+    commitment: 3
+    os: rhel
+  - name: t2d-standard-8
+    type: t2d-standard-8
+    commitment: 3
+    os: rhel
+  - name: t2d-standard-16
+    type: t2d-standard-16
+    commitment: 3
+    os: rhel
+  - name: t2d-standard-32
+    type: t2d-standard-32
+    commitment: 3
+    os: rhel
+  - name: t2d-standard-48
+    type: t2d-standard-48
+    commitment: 3
+    os: rhel

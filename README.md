@@ -31,7 +31,7 @@ The following steps you need to run for each benchmark run:
     mise build
     cd terraform
     terraform apply \
-        -var="client_machine_type=c4-highcpu-4" \
+        -var="client_machine_type=t2d-standard-48" \
         -var="sut_instance_count=3" \
         -var="sut_machine_type=t2d-standard-1" \
         -var="deployment_mode=cluster" \
@@ -52,12 +52,40 @@ The following steps you need to run for each benchmark run:
 
 ./scripts/run-benchmark.sh
 
+# run this step to remove the sut nodes as you download the results
+# this way you can save some costs
+(
+    cd ./terraform
+    terraform destroy \
+        -target="google_compute_instance.sut_nodes" \
+        --auto-approve
+
+)
+
 # collect results from the sut client onto local machine
 ./scripts/get-results.sh
 
 # destroy the deployed infrastructure
 cd terraform
 terraform destroy --auto-approve
+```
+
+## Price calculation
+
+To calculate the price of the VM instances in the cloud I've used the [gcosts](https://github.com/Cyclenerd/google-cloud-pricing-cost-calculator) tool.
+This tools allows automatical price calculation, making it possible to compare the prices in the future.
+
+This is a command to update the pricing.
+
+```
+curl -L "https://github.com/Cyclenerd/google-cloud-pricing-cost-calculator/raw/master/pricing.yml" \
+     -o "pricing.yml"
+```
+
+Afterwards run this command to caluclate the prices of all benchmarked VM instance types combinations.
+
+```
+gcosts calc --dir ./cost-calc/ --pricing ./pricing.yml
 ```
 
 ## Decisions
@@ -73,22 +101,29 @@ Furthermore it always uses `Always AMD EPYC (Milan)` processor type, compared to
 
 As I benchmark pure in-memory througput (Persistance will be OFF), I've decided not to use a VM with SSD attached.
 
-For the load-generator I've chosen
+For the load-generator I've chosen t2d-standard-48.
+
+The network bandwidth of the load-generator node is 32 Gbps, which was below during the benchmark runs.
+
+## OS Pricing
+
+Some enterprises may decide to use RHEL Linux on their deployed services.
+Initially we thought that it may be worth to include it in the price, as horizontal scaling requires more active instances.
+However, the pricing of RHEL on GCP is per vcpu, making the comparison in our case not worth persuing, as we compare same vcpu count for horizontal and vertical scaling each time.
 
 #### Benchmark runs
 
 For single node I would like to run:
 
-| Machine Type    | Price/Month |
-| --------------- | ----------- |
-| t2d-standard-1  | 45$/month   |
-| t2d-standard-2  | 85$/month   |
-| t2d-standard-4  | 164$/month  |
-| t2d-standard-8  | 323$/month  |
-| t2d-standard-16 | 641/month   |
-| t2d-standard-32 | 1,276/month |
-| t2d-standard-48 | 1,912/month |
-| t2d-standard-64 | 2,389/month |
+| Machine Type    | Price/Month | Commitment |
+| --------------- | ----------- | ---------- |
+| t2d-standard-1  | 13.88       | 3          |
+| t2d-standard-2  | 27.76       | 3          |
+| t2d-standard-4  | 55.52       | 3          |
+| t2d-standard-8  | 111.03      | 3          |
+| t2d-standard-16 | 222.06      | 3          |
+| t2d-standard-32 | 444.12      | 3          |
+| t2d-standard-48 | 666.18      | 3          |
 
 For cluster:
 3x t2d-standard-1 ~= 134$/month
