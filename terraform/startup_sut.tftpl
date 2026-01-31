@@ -18,14 +18,6 @@ touch /valkey-installed
 # Required by valkey
 sysctl vm.overcommit_memory=1
 
-# Calculate the cores to use, equivalent to min(nproc/4, 8)
-NUM_CORES=$(nproc)
-IDLE_CORES=$((NUM_CORES / 4))
-if [ "$IDLE_CORES" -gt 8 ]; then
-  IDLE_CORES=8
-fi
-IO_THREADS=$((NUM_CORES - IDLE_CORES))
-
 # Reserve 1GB+0.1*total-memory for system, capped at MAX_RESERVED_MB
 TOTAL_MEM_MB=$(free -m | awk '/^Mem:/ {print $2}')
 RESERVED_MB=$(awk -v mem="$TOTAL_MEM_MB" 'BEGIN { printf "%d\n", mem * 0.1 }')
@@ -43,7 +35,7 @@ if [[ "${deployment_mode}" == "cluster" ]]; then
     --cluster-enabled yes \
     --cluster-config-file nodes.conf \
     --cluster-node-timeout 5000 \
-    --io-threads "$IO_THREADS" \
+    --io-threads "${io_threads}" \
     --requirepass "csb-benchmark"
 
 elif [[ "${deployment_mode}" == "single" ]]; then
@@ -52,7 +44,7 @@ elif [[ "${deployment_mode}" == "single" ]]; then
   valkey-server \
     --maxmemory "$${MAX_MEMORY_MB}mb" \
     --maxmemory-policy allkeys-lru \
-    --io-threads "$IO_THREADS" \
+    --io-threads "${io_threads}" \
     --requirepass "csb-benchmark"
 
 else

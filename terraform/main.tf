@@ -64,6 +64,7 @@ resource "google_compute_instance" "sut_nodes" {
   metadata_startup_script = templatefile("startup_sut.tftpl", {
     deployment_mode        = var.deployment_mode
     valkey_binaries_bucket = google_storage_bucket.valkey_binaries.name
+    io_threads             = var.io_threads
   })
 
 

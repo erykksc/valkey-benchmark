@@ -91,6 +91,17 @@ func mustGetValkeyInfo(addreses []string, password string) string {
 	}
 	serverInfoString.WriteString(serverInfo)
 
+	// Get io-threads config
+	serverInfoString.WriteString("\nVALKEY CONFIG (io-threads):\n")
+	configIOThreads, err := client.Do(context.Background(), client.B().ConfigGet().Parameter("io-threads").Build()).AsStrMap()
+	if err == nil {
+		if val, ok := configIOThreads["io-threads"]; ok {
+			fmt.Fprintf(&serverInfoString, "io-threads: %s\n", val)
+		}
+	} else {
+		serverInfoString.WriteString("Failed to get io-threads config\n")
+	}
+
 	return serverInfoString.String()
 }
 

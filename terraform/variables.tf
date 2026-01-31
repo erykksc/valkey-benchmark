@@ -61,3 +61,9 @@ variable "deployment_mode" {
     error_message = "Must be either 'single' or 'cluster'."
   }
 }
+
+variable "io_threads" {
+  description = "Number of IO threads to use for Valkey."
+  type        = number
+  default     = 1
+}

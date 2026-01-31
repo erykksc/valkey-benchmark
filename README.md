@@ -35,6 +35,7 @@ The following steps you need to run for each benchmark run:
         -var="sut_instance_count=3" \
         -var="sut_machine_type=t2d-standard-1" \
         -var="deployment_mode=cluster" \
+        -var="io_threads=1" \
         --auto-approve
 )
 
