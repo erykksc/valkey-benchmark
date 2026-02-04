@@ -51,6 +51,15 @@ terraform apply --auto-approve
 description = "Destory the deployed infrastructure"
 run = "cd terraform && terraform destroy --auto-approve"
 
+[tasks.destroy-sut]
+description = "Destory the deployed SUT nodes"
+run = '''
+cd ./terraform
+terraform destroy \
+    -target="google_compute_instance.sut_nodes" \
+    --auto-approve
+'''
+
 [tasks.monitor]
 description = "Enter monitoring of the client node"
 run = "gcloud compute ssh valkey-client-node --zone=us-west1-c --ssh-flag='-t' --command='btop'"

@@ -28,15 +28,27 @@ The following steps you need to run for each benchmark run:
 # NOTE: for pruduction run
 # deployment_mode can be either 'cluster' or 'single'
 (
+    set -e
     mise build
     cd terraform
     terraform apply \
-        -var="client_machine_type=t2d-standard-48" \
-        -var="sut_instance_count=3" \
-        -var="sut_machine_type=t2d-standard-1" \
+        -var="client_machine_type=t2d-standard-32" \
+        -var="sut_instance_count=24" \
+        -var="sut_machine_type=t2d-standard-2" \
         -var="deployment_mode=cluster" \
         -var="io_threads=1" \
         --auto-approve
+    cd ..
+    ./scripts/wait-valkey.sh
+    ./scripts/run-benchmark.sh
+    cd terraform
+    terraform destroy \
+        -target="google_compute_instance.sut_nodes" \
+        --auto-approve
+    cd ..
+    ./scripts/get-results.sh
+    cd terraform
+    terraform destroy --auto-approve
 )
 
 # wait for the system to deploy fully
@@ -113,6 +125,18 @@ The network bandwidth of the load-generator node is 32 Gbps, which was below dur
 Some enterprises may decide to use RHEL Linux on their deployed services.
 Initially we thought that it may be worth to include it in the price, as horizontal scaling requires more active instances.
 However, the pricing of RHEL on GCP is per vcpu, making the comparison in our case not worth persuing, as we compare same vcpu count for horizontal and vertical scaling each time.
+
+### Comparable Configurations
+
+To answer the research question regarding cost-efficiency, we define specific comparison groups where the total monthly cost of the "Scale Up" (Single Node) scenario is roughly equivalent to the "Scale Out" (Cluster) scenario.
+
+| Group                      | Single Node Config | Monthly Cost | Cluster Config       | Monthly Cost | Notes                                                          |
+| :------------------------- | :----------------- | :----------- | :------------------- | :----------- | :------------------------------------------------------------- |
+| **Budget Entry Level**     | `t2d-standard-1`   | ~$13.88      |                      |              | Cluster not achievable at this price                           |
+| **Entry Level**            | `t2d-standard-4`   | ~$55.52      | `3x t2d-standard-1`  | ~$41.64      | Minimal cluster size (3 nodes)                                 |
+| **Mid Range**              | `t2d-standard-16`  | ~$222.06     | `7x t2d-standard-2`  | ~$194.32     | 7-node cluster (3 primaries, 4 replicas/spare)                 |
+| **High Performance**       | `t2d-standard-48`  | ~$666.18     | `24x t2d-standard-2` | ~$666.24     | **Exact Price Match.** 24-node cluster vs massive single node. |
+| **High Performance (Alt)** | `t2d-standard-48`  | ~$666.18     | `48x t2d-standard-1` | ~$666.24     | **Exact Price Match.** 48 tiny nodes vs 1 massive node.        |
 
 #### Benchmark runs
 
