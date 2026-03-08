@@ -388,6 +388,11 @@ def generate_plots(results, output_dir=OUTPUT_DIR):
 
     categories = sorted(list(set(k[0] for k in results.keys())))
 
+    def get_plot_config_label(label, data):
+        if str(data["node_count"]) in label:
+            return f"{label}, {data['cores_str']}"
+        return f"{label} ({data['node_count']}x{data['cores_str']})"
+
     for cat in categories:
         cat_data = {k: v for k, v in results.items() if k[0] == cat}
 
@@ -407,7 +412,7 @@ def generate_plots(results, output_dir=OUTPUT_DIR):
             mean_rps = [np.mean(data["rps"][s]) for s in seconds]
             std_rps = [np.std(data["rps"][s]) for s in seconds]
             mean_p99 = [np.mean(data["p99"][s]) / 1000.0 for s in seconds]  # us to ms
-            config_label = f"{label} ({data['node_count']}x{data['cores_str']})"
+            config_label = get_plot_config_label(label, data)
 
             ax1.plot(
                 seconds,
@@ -449,6 +454,7 @@ def generate_plots(results, output_dir=OUTPUT_DIR):
         # Plot 2: Latency CDF
         plt.figure()
         ax = plt.gca()
+        annotation_index = 0
         for idx, ((_, label), data) in enumerate(cat_data.items()):
             hist = data["hist"]
             if not hist:
@@ -477,9 +483,10 @@ def generate_plots(results, output_dir=OUTPUT_DIR):
                     x.append(lat / 1000.0)  # us to ms
                     y.append(percentile)
 
-            config_label = f"{label} ({data['node_count']}x{data['cores_str']})"
+            config_label = get_plot_config_label(label, data)
             (line,) = ax.plot(x, y, label=config_label)
             line_color = line.get_color()
+            base_label_y = 0.902 + annotation_index * 0.012
 
             if p99_latency is not None:
                 ax.axvline(
@@ -490,12 +497,13 @@ def generate_plots(results, output_dir=OUTPUT_DIR):
                 )
                 ax.text(
                     p99_latency * 1.02,
-                    0.99,
-                    f"p99: {p99_latency:.2f} ms",
+                    base_label_y,
+                    f"{p99_latency:.2f} ms",
                     color=line_color,
                     ha="left",
                     va="bottom",
                 )
+                annotation_index += 1
             if p999_latency is not None:
                 ax.axvline(
                     p999_latency,
@@ -505,12 +513,13 @@ def generate_plots(results, output_dir=OUTPUT_DIR):
                 )
                 ax.text(
                     p999_latency * 1.02,
-                    0.999,
-                    f"p99.9: {p999_latency:.2f} ms",
+                    0.902 + annotation_index * 0.012,
+                    f"{p999_latency:.2f} ms",
                     color=line_color,
                     ha="left",
                     va="bottom",
                 )
+                annotation_index += 1
 
         for percentile, label in ((0.99, "p99"), (0.999, "p99.9")):
             ax.axhline(percentile, color="gray", linestyle="--", linewidth=1, alpha=0.8)
