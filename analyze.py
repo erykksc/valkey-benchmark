@@ -389,9 +389,8 @@ def generate_plots(results, output_dir=OUTPUT_DIR):
     categories = sorted(list(set(k[0] for k in results.keys())))
 
     def get_plot_config_label(label, data):
-        if str(data["node_count"]) in label:
-            return f"{label}, {data['cores_str']}"
-        return f"{label} ({data['node_count']}x{data['cores_str']})"
+        base_label = label.split(" (")[0]
+        return f"{base_label} ({data['node_count']}x{data['cores_str']})"
 
     for cat in categories:
         cat_data = {k: v for k, v in results.items() if k[0] == cat}
