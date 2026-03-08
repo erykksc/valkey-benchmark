@@ -462,17 +462,42 @@ def generate_plots(results, output_dir=OUTPUT_DIR):
             x = []
             y = []
             running_sum = 0
+            p99_latency = None
+            p999_latency = None
 
             for lat in sorted_lats:
                 count = hist[lat]
                 running_sum += count
                 percentile = running_sum / total_reqs
 
+                if p99_latency is None and percentile >= 0.99:
+                    p99_latency = lat / 1000.0
+                if p999_latency is None and percentile >= 0.999:
+                    p999_latency = lat / 1000.0
+
                 if percentile >= 0.90:
                     x.append(lat / 1000.0)  # us to ms
                     y.append(percentile)
 
-            plt.plot(x, y, label=label)
+            (line,) = ax.plot(x, y, label=label)
+            line_color = line.get_color()
+
+            if p99_latency is not None:
+                ax.axvline(
+                    p99_latency,
+                    color=line_color,
+                    linestyle=":",
+                    linewidth=1,
+                    alpha=0.9,
+                )
+            if p999_latency is not None:
+                ax.axvline(
+                    p999_latency,
+                    color=line_color,
+                    linestyle=":",
+                    linewidth=1,
+                    alpha=0.9,
+                )
 
         for percentile, label in ((0.99, "p99"), (0.999, "p99.9")):
             ax.axhline(percentile, color="gray", linestyle="--", linewidth=1, alpha=0.8)
