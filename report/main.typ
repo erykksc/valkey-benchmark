@@ -365,58 +365,46 @@ The latencies in two clustered setups include periodic spikes, the single VM set
 
 = Evaluation/Discussion
 
-// Interpret results
+The length of the benchmark runs in this experiment were relatively short, and it would be preferable to run each of them for longer e.g., 1 hours instead of 20 minutes.
+This way one could obtain more reliable results, and observe the trends better.
+  
+The workload in the experiment is semi-realistic as it uses Zipf distribution but only simple commands SET and GET, benchmarking only the basic functionality of Valkey.
+Redis compatible databases such as Valkey, provide a wide set of commands which performant remains to be benchmarked and could be done in future research.
 
-// - Why do results behave this way?
-// - Bottlenecks?
-// - Trade-offs?
-// - Expected vs observed behavior?
-// - Relation to system architecture?
-
-<Discussion>
-
-
-= Threats to Validity
-
-== Internal Validity
-- Measurement inaccuracies
-- Benchmark implementation bias
-
-== External Validity
-- Realism of workload
-The workload in the experiment is semi-realistic as it uses Zipf distribution, but only simple commands SET and GET, benchmarking only the basic functionality of Valkey.
-Redis compatible databases such as Valkey, provide a wide set of commands which performant remains to be benchmarked.
-- Cloud environment influence
-The cloud environment introduces variability into the measurements, as the performance may vary between different times of a day as we can have a busy neighbor problem.
-
-== Construct Validity
-- Metric suitability
-
+The cloud environment introduces variability into the measurements, as the performance may vary between different times of a day as we can have a busy neighbor problem and on day to day basis.
+We likely observed this variability in the p99.9 latency measurements of the Mid-range setup.
+It would be preferable to rerun those benchmark runs, but we already exceded the assigned to use credits and our time was limited.
 
 = Conclusion
 
-// Directly answer research question
+The results show applicable trends where the Single VM deployments achieve higher throughput, lower latencies and higher efficiency compared to the clustered VM setups.
+Additionally single node deployments are easier to maintain and deploy.
+Thus it is suggested to use a single VM setup for Budget-entry-level and Entry-level setups.
 
-// - Main findings
-// - Recommended configuration
-// - Practical implications
+For the Mid-range category we see that the horizontally scaled system outperforms the single VM deployment both in performance in all metrics as well as the efficiency.
+The only downsize seems to be the p99.9 performance, but our results show a very high variability, making the results unclear.
+The variance could come from the relatively low benchmarking time, 1 hour combined (3x 20 minut runs) and cloud service performance variability.
+This interpretation is supported by the fact that the High-performance Cluster setups had lower p99.9 latency, while being worse in all other metrics.
+Thus we can say that the high p99.9 variability in clustered Mid-range setup is inherent to the clustered deployment and is likely due to other factors.
 
-<Conclusion>
+In the High-performance setups we see that they perform worse than the Mid-range setups, indicating that some scaling bottleneck has been hit.
+In vertically scaled setup, it was likely to how Valkey utilizes additional threads using them only for IO, while the logic is run on a single thread. 
+Each IO thread has a cost associated with managing it and having too high amount of threads with their management cost outweigh the performance gains.
 
+For the vertically scaled system in High-performance category we also see the issue with having too many nodes.
+Our results indicate that even thought the client of the SUT is aware of the cluster setup and queries each node directly[VALKYE_REFERENCE], each node introduces communication and mnagement cost inside the cluster, leading to reduced performance.
+
+The sweet spot for performance from the categories we defined seems to be the Mid-range option, which has highest performance out of all.
+However, it should be noted that we only benchmarked a set of setups and a higher performance could be reached with a cluster size between Mid-range and High-performance or between Entry-level and Mid-range.
+
+Nonetheless, the highest efficiency has been reached on the Budget-entry-level, indicating that Valkey gives a lot performance on a single core setup.
+It would be interesting to see whether this performance would change on a different VM sizes e.g. 1 core `c4-standard` instance with high amounts of RAM or 2 core `c4-standard` as one CPU could be assigned to Valkey and another one to the system for handling Linux system calls and connections.
 
 = Future Work
 
-// Possible extensions:
-// - Larger deployments
-// - Different workloads
-// - Additional metrics
-// - Long-term experiments
-This work could be extended by testing wider range of VM types to see how the scalability behaves in other sizes.
-One could also measure how the systems behave with more client connections, whether the vertical cluster can sustains higher simultaneous clients.
+This work could be extended by testing wider range of VM types to see how the scalability behaves in other sizes, especially whether the clustered setups scale beyond 7 nodes.
+One could also measure how the systems behave with more client connections, whether the vertical cluster can sustains higher simultaneous clients than the single node deployment.
 
-// <Future work ideas>
-The length of the benchmark runs in this experiment were relatively short, and it would be preferable to run each of them for longer e.g., 1 hours instead of 20 minutes.
-This way one could obtain more reliable results, and observe the trends better.
 
 One could also try to run the Valkey on a VM Type with 1 or 2 cores and a high amounts of memory, as the experiment results showed that single core performance gets great results.
 
