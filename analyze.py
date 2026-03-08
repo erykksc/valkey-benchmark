@@ -391,13 +391,6 @@ def generate_plots(results, output_dir=OUTPUT_DIR):
     for cat in categories:
         cat_data = {k: v for k, v in results.items() if k[0] == cat}
 
-        # Construct Descriptive Title
-        descriptions = []
-        for (c, label), data in cat_data.items():
-            desc = f"{label}: {data['node_count']}x{data['cores_str']}"
-            descriptions.append(desc)
-        title_suffix = f"\n({', '.join(descriptions)})"
-
         # Plot 1: Workload Transition
         fig, ax1 = plt.subplots()
         ax2 = ax1.twinx()
@@ -414,9 +407,14 @@ def generate_plots(results, output_dir=OUTPUT_DIR):
             mean_rps = [np.mean(data["rps"][s]) for s in seconds]
             std_rps = [np.std(data["rps"][s]) for s in seconds]
             mean_p99 = [np.mean(data["p99"][s]) / 1000.0 for s in seconds]  # us to ms
+            config_label = f"{label} ({data['node_count']}x{data['cores_str']})"
 
             ax1.plot(
-                seconds, mean_rps, label=f"{label} RPS", color=color, linestyle="-"
+                seconds,
+                mean_rps,
+                label=f"{config_label} RPS",
+                color=color,
+                linestyle="-",
             )
             ax1.fill_between(
                 seconds,
@@ -429,7 +427,7 @@ def generate_plots(results, output_dir=OUTPUT_DIR):
             ax2.plot(
                 seconds,
                 mean_p99,
-                label=f"{label} P99 Latency",
+                label=f"{config_label} P99 Latency",
                 color=color,
                 linestyle="--",
             )
@@ -437,7 +435,7 @@ def generate_plots(results, output_dir=OUTPUT_DIR):
         ax1.set_xlabel("Time (s)")
         ax1.set_ylabel("Throughput (RPS)")
         ax2.set_ylabel("P99 Latency (ms)")
-        ax1.set_title(f"Workload Transition: {cat}{title_suffix}")
+        ax1.set_title(f"Workload Transition: {cat}")
 
         lines1, labels1 = ax1.get_legend_handles_labels()
         lines2, labels2 = ax2.get_legend_handles_labels()
@@ -479,7 +477,8 @@ def generate_plots(results, output_dir=OUTPUT_DIR):
                     x.append(lat / 1000.0)  # us to ms
                     y.append(percentile)
 
-            (line,) = ax.plot(x, y, label=label)
+            config_label = f"{label} ({data['node_count']}x{data['cores_str']})"
+            (line,) = ax.plot(x, y, label=config_label)
             line_color = line.get_color()
 
             if p99_latency is not None:
@@ -488,7 +487,14 @@ def generate_plots(results, output_dir=OUTPUT_DIR):
                     color=line_color,
                     linestyle=":",
                     linewidth=1,
-                    alpha=0.9,
+                )
+                ax.text(
+                    p99_latency * 1.02,
+                    0.99,
+                    f"p99: {p99_latency:.2f} ms",
+                    color=line_color,
+                    ha="left",
+                    va="bottom",
                 )
             if p999_latency is not None:
                 ax.axvline(
@@ -496,7 +502,14 @@ def generate_plots(results, output_dir=OUTPUT_DIR):
                     color=line_color,
                     linestyle=":",
                     linewidth=1,
-                    alpha=0.9,
+                )
+                ax.text(
+                    p999_latency * 1.02,
+                    0.999,
+                    f"p99.9: {p999_latency:.2f} ms",
+                    color=line_color,
+                    ha="left",
+                    va="bottom",
                 )
 
         for percentile, label in ((0.99, "p99"), (0.999, "p99.9")):
@@ -514,7 +527,7 @@ def generate_plots(results, output_dir=OUTPUT_DIR):
         plt.xscale("log")
         plt.xlabel("Latency (ms) [Log Scale]")
         plt.ylabel("Percentile (CDF)")
-        plt.title(f"Tail Latency CDF (P90-P99.9): {cat}{title_suffix}")
+        plt.title(f"Tail Latency CDF (P90-P99.9): {cat}")
         plt.legend()
         plt.grid(True, which="both", ls="-")
         plt.savefig(
