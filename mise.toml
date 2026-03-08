@@ -3,6 +3,7 @@ gcloud = "552"
 "github:Cyclenerd/google-cloud-pricing-cost-calculator" = "latest"
 go = "1.25"
 terraform = "1.14"
+typst = "latest"
 uv = "latest"
 
 [settings]

@@ -8,8 +8,8 @@
 # Crash log files
 crash.log
 
-*.png
 *.csv
+*.tar.gz
 
 .venv/
 

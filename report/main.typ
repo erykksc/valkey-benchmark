@@ -349,7 +349,7 @@ The latency has almost zero variability outside of those clusters.
 ) <plot_workload_mid_range>
 
 On the @plot_workload_mid_range we see that clustered setup achieved higher throughput, the single cluster setup appears more stable with ocasional dips.
-The latency plot for the single node setup seems more consistent throughout the time with periodic small latency spikes, whereas clustered setup seems to have lower latency but with more sporadic magnitude higher latency spikes compared to the single VM setup.
+The latency plot for the single node setup is more consistent throughout the time with periodic small latency spikes, whereas clustered setup has lower latency but with more sporadic magnitude higher latency spikes compared to the single VM setup.
 The latency spikes in clustered setup appear mostly on the right side of the plot, so on during time when there are more GET requests than SET requests.
 
 #figure(
