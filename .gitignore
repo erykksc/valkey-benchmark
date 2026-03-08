@@ -34,3 +34,4 @@ dump.rdb
 results/
 benchmark arch-valkey/
 
+__pycache__/

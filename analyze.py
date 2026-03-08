@@ -450,6 +450,7 @@ def generate_plots(results, output_dir=OUTPUT_DIR):
 
         # Plot 2: Latency CDF
         plt.figure()
+        ax = plt.gca()
         for idx, ((_, label), data) in enumerate(cat_data.items()):
             hist = data["hist"]
             if not hist:
@@ -472,6 +473,18 @@ def generate_plots(results, output_dir=OUTPUT_DIR):
                     y.append(percentile)
 
             plt.plot(x, y, label=label)
+
+        for percentile, label in ((0.99, "p99"), (0.999, "p99.9")):
+            ax.axhline(percentile, color="gray", linestyle="--", linewidth=1, alpha=0.8)
+            ax.text(
+                0.99,
+                percentile,
+                label,
+                transform=ax.get_yaxis_transform(),
+                ha="right",
+                va="bottom",
+                color="gray",
+            )
 
         plt.xscale("log")
         plt.xlabel("Latency (ms) [Log Scale]")
@@ -558,7 +571,15 @@ def generate_cost_plot(results, output_dir):
     efficiencies = [efficiencies[i] for i in sorted_indices]
     colors = [colors[i] for i in sorted_indices]
 
-    plt.bar(labels, efficiencies, color=colors)
+    bars = plt.bar(labels, efficiencies, color=colors)
+    for bar, efficiency in zip(bars, efficiencies):
+        plt.text(
+            bar.get_x() + bar.get_width() / 2,
+            bar.get_height(),
+            f"{efficiency:.2f}",
+            ha="center",
+            va="bottom",
+        )
     plt.ylabel("Efficiency Index (Avg RPS / $ Monthly)")
     plt.title("Cost-Efficiency Comparison")
     plt.xticks(rotation=45, ha="right")
